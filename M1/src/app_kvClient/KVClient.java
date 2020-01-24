@@ -63,7 +63,7 @@ public class KVClient implements IKVClient {
 			    	printError("Invalid number of parameters!");
 			    }
                 break;
-            case "send":
+            case "get":
                 if(tokens.length == 2) {
 			    	if(store != null && store.isRunning()){
 						String key = tokens[1];
@@ -119,16 +119,19 @@ public class KVClient implements IKVClient {
     
     private void printHelp() {
 		StringBuilder sb = new StringBuilder();
-		sb.append(PROMPT).append("ECHO CLIENT HELP (Usage):\n");
+		sb.append(PROMPT).append("KV CLIENT HELP (Usage):\n");
 		sb.append(PROMPT);
 		sb.append("::::::::::::::::::::::::::::::::");
 		sb.append("::::::::::::::::::::::::::::::::\n");
 		sb.append(PROMPT).append("connect <host> <port>");
 		sb.append("\t establishes a connection to a server\n");
-		sb.append(PROMPT).append("send <text message>");
-		sb.append("\t\t sends a text message to the server \n");
 		sb.append(PROMPT).append("disconnect");
 		sb.append("\t\t\t disconnects from the server \n");
+
+		sb.append(PROMPT).append("put <key> <value>");
+		sb.append("\t\t inserts/updates/deletes a key-value pair in the storage server \n");
+		sb.append(PROMPT).append("get <key>");
+		sb.append("\t\t retrieves a key-value pair from the storage server \n");
 		
 		sb.append(PROMPT).append("logLevel");
 		sb.append("\t\t\t changes the logLevel \n");
