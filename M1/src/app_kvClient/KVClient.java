@@ -50,9 +50,9 @@ public class KVClient implements IKVClient {
                 if(tokens.length == 3) {
 			    	try{
 			    		String serverAddress = tokens[1];
-			    		int serverPort = Integer.parseInt(tokens[2]);
-			    		newConnection(serverAddress, serverPort);
-			    	} catch(NumberFormatException nfe) {
+						int serverPort = Integer.parseInt(tokens[2]);
+						newConnection(serverAddress, serverPort);
+			    	} catch (NumberFormatException nfe) {
 			    		printError("No valid address. Port must be a number!");
 			    	} catch (UnknownHostException e) {
 			    		printError("Unknown Host!");
@@ -66,8 +66,13 @@ public class KVClient implements IKVClient {
             case "send":
                 if(tokens.length == 2) {
 			    	if(store != null && store.isRunning()){
-                        String key = tokens[1];
-                        KVMessage message = store.get(key);
+						String key = tokens[1];
+						try {
+							KVMessage message = store.get(key);
+						} catch(Exception e) {
+							logger.error(e);
+						}
+                        
 			    	} else {
 			    		printError("Not connected!");
 			    	}
@@ -102,7 +107,7 @@ public class KVClient implements IKVClient {
     }
 
     @Override
-    public void newConnection(String hostname, int port) throws Exception{
+    public void newConnection(String hostname, int port) throws UnknownHostException, IOException {
         store = new KVStore(hostname, port);
         store.connect();
     }
