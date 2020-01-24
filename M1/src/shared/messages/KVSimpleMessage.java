@@ -8,6 +8,9 @@ import java.io.Serializable;
  */
 public class KVSimpleMessage implements Serializable, KVMessage {
 
+	private static final char LINE_FEED = 0x0A;
+	private static final char RETURN = 0x0D;
+
 	private StatusType status;
     private String key;
     private String value;
@@ -16,6 +19,27 @@ public class KVSimpleMessage implements Serializable, KVMessage {
 		this.status = status;
 		this.key = key;
 		this.value = value;
+	}
+
+	/**
+	 * Returns the content of this KVMessage as a String.
+	 * 
+	 * @return the content of this message in String format.
+	 */
+	public String getMsg() {
+		String msg = this.status + " " + this.key + " " + this.value;
+		return msg.trim();
+	}
+
+	/**
+	 * Returns an array of bytes that represent the ASCII coded message content.
+	 * 
+	 * @return the content of this message as an array of bytes 
+	 * 		in ASCII coding.
+	 */
+	public byte[] getMsgBytes() {
+		byte[] msgBytes = toByteArray(this.getMsg());
+		return msgBytes;
 	}
 
 	/**
@@ -43,5 +67,16 @@ public class KVSimpleMessage implements Serializable, KVMessage {
 	@Override
 	public StatusType getStatus() {
 		return status;
+	}
+
+	private byte[] toByteArray(String s){
+		byte[] bytes = s.getBytes();
+		byte[] ctrBytes = new byte[]{LINE_FEED, RETURN};
+		byte[] tmp = new byte[bytes.length + ctrBytes.length];
+		
+		System.arraycopy(bytes, 0, tmp, 0, bytes.length);
+		System.arraycopy(ctrBytes, 0, tmp, bytes.length, ctrBytes.length);
+		
+		return tmp;		
 	}
 }

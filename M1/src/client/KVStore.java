@@ -3,20 +3,16 @@ package client;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.Socket;
 import java.net.UnknownHostException;
 
-import org.apache.log4j.Logger;
-
+import shared.communications.KVStoreCommunications;
 import shared.messages.KVMessage;
 import shared.messages.KVMessage.StatusType;
 
 public class KVStore implements KVCommInterface {
-
-	private Logger logger = Logger.getRootLogger();
 	private boolean running;
 
-	private Socket clientSocket;
+	private KVStoreCommunications communications;
 	private OutputStream output;
  	private InputStream input;
 
@@ -35,51 +31,27 @@ public class KVStore implements KVCommInterface {
 
 	@Override
 	public void connect() throws UnknownHostException, IOException {
-		clientSocket = new Socket(serverAddress, serverPort);
-		setRunning(true);
-		logger.info("Connection established");
+		communications = new KVStoreCommunications(serverAddress, serverPort);
 	}
 
 	@Override
 	public void disconnect() {
-		logger.info("try to close connection ...");
-		
-		try {
-			tearDownConnection();
-		} catch (IOException ioe) {
-			logger.error("Unable to close connection!");
-		}
-	}
-
-	private void tearDownConnection() throws IOException {
-		setRunning(false);
-		logger.info("tearing down the connection ...");
-		if (clientSocket != null) {
-			//input.close();
-			//output.close();
-			clientSocket.close();
-			clientSocket = null;
-			logger.info("connection closed!");
-		}
+		communications.closeConnection();
 	}
 
 	public boolean isRunning() {
-		return running;
-	}
-	
-	public void setRunning(boolean run) {
-		running = run;
+		return communications.isRunning();
 	}
 
 	@Override
 	public KVMessage put(String key, String value) throws Exception {
-		// TODO Auto-generated method stub
-		return null;
+		communications.sendKVMessage(StatusType.PUT, key, value);
+        return communications.receiveKVMessage();
 	}
 
 	@Override
 	public KVMessage get(String key) throws Exception {
-		// TODO Auto-generated method stub
-		return null;
+		communications.sendKVMessage(StatusType.GET, key, null);
+        return communications.receiveKVMessage();
 	}
 }
