@@ -25,13 +25,13 @@ public class KVStore implements KVCommInterface {
 	 * @param port the port of the KVServer
 	 */
 	public KVStore(String address, int port) {
-		serverAddress = address;
-		serverPort = port;
+		this.serverAddress = address;
+		this.serverPort = port;
 	}
 
 	@Override
-	public void connect() throws UnknownHostException, IOException {
-		communications = new KVStoreCommunications(serverAddress, serverPort);
+	public void connect() throws Exception {
+		communications = new KVStoreCommunications(this.serverAddress, this.serverPort);
 	}
 
 	@Override
@@ -46,12 +46,12 @@ public class KVStore implements KVCommInterface {
 	@Override
 	public KVMessage put(String key, String value) throws Exception {
 		communications.sendKVMessage(StatusType.PUT, key, value);
-        return communications.receiveKVMessage();
+		return communications.receiveKVMessage();
 	}
 
 	@Override
 	public KVMessage get(String key) throws Exception {
 		communications.sendKVMessage(StatusType.GET, key, null);
-        return communications.receiveKVMessage();
+		return communications.receiveKVMessage();
 	}
 }

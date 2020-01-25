@@ -23,7 +23,7 @@ public class KVClient implements IKVClient {
     private boolean stop = false;
 
     public void run() {
-		while(!stop) {
+		while(!this.stop) {
 			this.stdin = new BufferedReader(new InputStreamReader(System.in));
 			System.out.print(PROMPT);
 			
@@ -31,7 +31,7 @@ public class KVClient implements IKVClient {
 				String cmdLine = this.stdin.readLine();
 				this.handleCommand(cmdLine);
 			} catch (IOException e) {
-				stop = true;
+				this.stop = true;
 				printError("CLI does not respond - Application terminated ");
 			}
 		}
@@ -42,7 +42,7 @@ public class KVClient implements IKVClient {
 
         switch (tokens[0]) {
             case "quit":
-                stop = true;
+                this.stop = true;
 			    this.store.disconnect();
 			    System.out.println(PROMPT + "Application exit!");
                 break;
@@ -58,7 +58,7 @@ public class KVClient implements IKVClient {
 			    		printError("Unknown Host!");
 			    	} catch (IOException e) {
 			    		printError("Could not establish connection!");
-			    	}
+			    	} catch (Exception e) {}
 			    } else {
 			    	printError("Invalid number of parameters!");
 			    }

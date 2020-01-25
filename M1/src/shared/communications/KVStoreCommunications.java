@@ -17,7 +17,7 @@ import shared.messages.KVMessage.StatusType;
  * Represents a simple KV message, which is intended to be received and sent 
  * by the client and the server.
  */
-public class KVStoreCommunications implements Runnable {
+public class KVStoreCommunications {
 
 	private Logger logger = Logger.getRootLogger();
 	private boolean running;
@@ -33,51 +33,26 @@ public class KVStoreCommunications implements Runnable {
 	public KVStoreCommunications(String address, int port) 
 			throws UnknownHostException, IOException {
 		try {
-			storeSocket = new Socket(address, port);
-			output = storeSocket.getOutputStream();
-			input = storeSocket.getInputStream();
+			this.storeSocket = new Socket(address, port);
+			output = this.storeSocket.getOutputStream();
+			input = this.storeSocket.getInputStream();
 			setRunning(true);
 			logger.info("Connection established");
+		} catch (IOException ioe) {
+			if(isRunning()) {
+				logger.error("Connection lost!");
+				try {
+					tearDownConnection();
+				} catch (IOException e) {
+					logger.error("Unable to close connection!");
+				}
+			}
 		} catch (Exception e) {
 			logger.error(e);
-			e.printStackTrace();
 		}
 	}
 	
-	/**
-	 * Initializes and starts the client connection. 
-	 * Loops until the connection is closed or aborted by the client.
-	 */
-	public void run() {
-		try {
-			output = storeSocket.getOutputStream();
-			input = storeSocket.getInputStream();
-			
-			while(isRunning()) {
-				try {
-					KVMessage latestMsg = receiveKVMessage();
-				} catch (IOException ioe) {
-					if(isRunning()) {
-						logger.error("Connection lost!");
-						try {
-							tearDownConnection();
-						} catch (IOException e) {
-							logger.error("Unable to close connection!");
-						}
-					}
-				}				
-			}
-		} catch (IOException ioe) {
-			logger.error("Connection could not be established!");
-			
-		} finally {
-			if(isRunning()) {
-				closeConnection();
-			}
-		}
-	}
-	
-	public synchronized void closeConnection() {
+	public void closeConnection() {
 		logger.info("try to close connection ...");
 		
 		try {
@@ -90,11 +65,11 @@ public class KVStoreCommunications implements Runnable {
 	private void tearDownConnection() throws IOException {
 		setRunning(false);
 		logger.info("tearing down the connection ...");
-		if (storeSocket != null) {
+		if (this.storeSocket != null) {
 			input.close();
 			output.close();
-			storeSocket.close();
-			storeSocket = null;
+			this.storeSocket.close();
+			this.storeSocket = null;
 			logger.info("connection closed!");
 		}
 	}
@@ -178,9 +153,9 @@ public class KVStoreCommunications implements Runnable {
 		/* build final String */
 		String msg = new String(msgBytes).trim();
 		String[] tokens = msg.split("\\s+");
+		logger.info(tokens);
 		KVSimpleMessage ret = new KVSimpleMessage(StatusType.valueOf(tokens[0]), null, null);
 		logger.info("Receive message:\t '" + ret.getMsg() + "'");
 		return ret;
     }
- 	
 }
