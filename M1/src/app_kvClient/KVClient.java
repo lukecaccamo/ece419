@@ -24,11 +24,11 @@ public class KVClient implements IKVClient {
 
     public void run() {
 		while(!stop) {
-			stdin = new BufferedReader(new InputStreamReader(System.in));
+			this.stdin = new BufferedReader(new InputStreamReader(System.in));
 			System.out.print(PROMPT);
 			
 			try {
-				String cmdLine = stdin.readLine();
+				String cmdLine = this.stdin.readLine();
 				this.handleCommand(cmdLine);
 			} catch (IOException e) {
 				stop = true;
@@ -43,7 +43,7 @@ public class KVClient implements IKVClient {
         switch (tokens[0]) {
             case "quit":
                 stop = true;
-			    store.disconnect();
+			    this.store.disconnect();
 			    System.out.println(PROMPT + "Application exit!");
                 break;
             case "connect":
@@ -51,7 +51,7 @@ public class KVClient implements IKVClient {
 			    	try{
 			    		String serverAddress = tokens[1];
 						int serverPort = Integer.parseInt(tokens[2]);
-						newConnection(serverAddress, serverPort);
+						this.newConnection(serverAddress, serverPort);
 			    	} catch (NumberFormatException nfe) {
 			    		printError("No valid address. Port must be a number!");
 			    	} catch (UnknownHostException e) {
@@ -62,33 +62,53 @@ public class KVClient implements IKVClient {
 			    } else {
 			    	printError("Invalid number of parameters!");
 			    }
-                break;
-            case "get":
-                if(tokens.length == 2) {
-			    	if(store != null && store.isRunning()){
+				break;
+			case "put":
+                if(tokens.length == 3) {
+			    	if(this.store != null && this.store.isRunning()){
 						String key = tokens[1];
+						String value = tokens[2];
 						try {
-							KVMessage message = store.get(key);
+							KVMessage message = this.store.put(key, value);
 						} catch(Exception e) {
-							logger.error(e);
+							this.logger.error(e);
+							e.printStackTrace();
 						}
                         
 			    	} else {
-			    		printError("Not connected!");
+			    		this.printError("Not connected!");
 			    	}
 			    } else {
-			    	printError("Invalid number of parameters!");
+			    	this.printError("Invalid number of parameters!");
+			    }
+                break;
+            case "get":
+                if(tokens.length == 2) {
+			    	if(this.store != null && this.store.isRunning()){
+						String key = tokens[1];
+						try {
+							KVMessage message = this.store.get(key);
+						} catch(Exception e) {
+							this.logger.error(e);
+							e.printStackTrace();
+						}
+                        
+			    	} else {
+			    		this.printError("Not connected!");
+			    	}
+			    } else {
+			    	this.printError("Invalid number of parameters!");
 			    }
                 break;
             case "disconnect":
-                store.disconnect();
+				this.store.disconnect();
                 break;
             case "logLevel":
                 if(tokens.length == 2) {
 			    	String level = setLevel(tokens[1]);
 			    	if(level.equals(LogSetup.UNKNOWN_LEVEL)) {
-			    		printError("No valid log level!");
-			    		printPossibleLogLevels();
+			    		this.printError("No valid log level!");
+			    		this.printPossibleLogLevels();
 			    	} else {
 			    		System.out.println(PROMPT + 
 			    				"Log level changed to level " + level);
@@ -98,23 +118,23 @@ public class KVClient implements IKVClient {
 			    }
                 break;
             case "help":
-                printHelp();
+                this.printHelp();
                 break;
             default:
                 printError("Unknown command");
-                printHelp();
+                this.printHelp();
         }
     }
 
     @Override
     public void newConnection(String hostname, int port) throws UnknownHostException, IOException {
-        store = new KVStore(hostname, port);
-        store.connect();
+        this.store = new KVStore(hostname, port);
+        this.store.connect();
     }
 
     @Override
     public KVCommInterface getStore(){
-        return store;
+        return this.store;
     }
     
     private void printHelp() {
@@ -153,25 +173,25 @@ public class KVClient implements IKVClient {
     private String setLevel(String levelString) {
 		
 		if(levelString.equals(Level.ALL.toString())) {
-			logger.setLevel(Level.ALL);
+			this.logger.setLevel(Level.ALL);
 			return Level.ALL.toString();
 		} else if(levelString.equals(Level.DEBUG.toString())) {
-			logger.setLevel(Level.DEBUG);
+			this.logger.setLevel(Level.DEBUG);
 			return Level.DEBUG.toString();
 		} else if(levelString.equals(Level.INFO.toString())) {
-			logger.setLevel(Level.INFO);
+			this.logger.setLevel(Level.INFO);
 			return Level.INFO.toString();
 		} else if(levelString.equals(Level.WARN.toString())) {
-			logger.setLevel(Level.WARN);
+			this.logger.setLevel(Level.WARN);
 			return Level.WARN.toString();
 		} else if(levelString.equals(Level.ERROR.toString())) {
-			logger.setLevel(Level.ERROR);
+			this.logger.setLevel(Level.ERROR);
 			return Level.ERROR.toString();
 		} else if(levelString.equals(Level.FATAL.toString())) {
-			logger.setLevel(Level.FATAL);
+			this.logger.setLevel(Level.FATAL);
 			return Level.FATAL.toString();
 		} else if(levelString.equals(Level.OFF.toString())) {
-			logger.setLevel(Level.OFF);
+			this.logger.setLevel(Level.OFF);
 			return Level.OFF.toString();
 		} else {
 			return LogSetup.UNKNOWN_LEVEL;

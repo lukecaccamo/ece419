@@ -32,9 +32,16 @@ public class KVStoreCommunications implements Runnable {
 	
 	public KVStoreCommunications(String address, int port) 
 			throws UnknownHostException, IOException {
-		storeSocket = new Socket(address, port);
-		setRunning(true);
-		logger.info("Connection established");
+		try {
+			storeSocket = new Socket(address, port);
+			output = storeSocket.getOutputStream();
+			input = storeSocket.getInputStream();
+			setRunning(true);
+			logger.info("Connection established");
+		} catch (Exception e) {
+			logger.error(e);
+			e.printStackTrace();
+		}
 	}
 	
 	/**
@@ -107,7 +114,8 @@ public class KVStoreCommunications implements Runnable {
 	 */
 	public void sendKVMessage(StatusType status, String key, String value) throws IOException {
 		KVSimpleMessage msg = new KVSimpleMessage(status, key, value);
-		output.write(msg.getMsgBytes(), 0, msg.getMsgBytes().length);
+		byte[] msgBytes = msg.getMsgBytes();
+		output.write(msgBytes, 0, msgBytes.length - 1);
 		output.flush();
 		logger.info("Send message:\t '" + msg.getMsg() + "'");
     }

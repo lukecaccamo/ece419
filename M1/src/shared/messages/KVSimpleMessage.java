@@ -13,12 +13,20 @@ public class KVSimpleMessage implements Serializable, KVMessage {
 
 	private StatusType status;
     private String key;
-    private String value;
+	private String value;
+	
+	String msg;
+	byte[] msgBytes;
 
 	public KVSimpleMessage(StatusType status, String key, String value) {
 		this.status = status;
 		this.key = key;
 		this.value = value;
+
+		this.msg = this.status + " " + this.key + " " + this.value;
+		this.msg.trim();
+
+		this.msgBytes = toByteArray(this.msg);
 	}
 
 	/**
@@ -27,8 +35,7 @@ public class KVSimpleMessage implements Serializable, KVMessage {
 	 * @return the content of this message in String format.
 	 */
 	public String getMsg() {
-		String msg = this.status + " " + this.key + " " + this.value;
-		return msg.trim();
+		return this.msg;
 	}
 
 	/**
@@ -38,8 +45,7 @@ public class KVSimpleMessage implements Serializable, KVMessage {
 	 * 		in ASCII coding.
 	 */
 	public byte[] getMsgBytes() {
-		byte[] msgBytes = toByteArray(this.getMsg());
-		return msgBytes;
+		return this.msgBytes;
 	}
 
 	/**
