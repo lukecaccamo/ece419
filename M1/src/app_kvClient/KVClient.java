@@ -12,7 +12,9 @@ import logger.LogSetup;
 
 import client.KVCommInterface;
 import client.KVStore;
-import shared.messages.KVMessage;
+import shared.communications.KVCommModule;
+import shared.communications.KVCommModule.SocketStatus;
+import shared.messages.KVSimpleMessage;
 
 public class KVClient implements IKVClient {
 
@@ -20,7 +22,10 @@ public class KVClient implements IKVClient {
     private static final String PROMPT = "KVClient> ";
     private BufferedReader stdin;
     private KVStore store = null;
-    private boolean stop = false;
+	private boolean stop = false;
+	
+	private String serverAddress;
+	private int serverPort;
 
     public void run() {
 		while(!this.stop) {
@@ -49,32 +54,49 @@ public class KVClient implements IKVClient {
             case "connect":
                 if(tokens.length == 3) {
 			    	try{
-			    		String serverAddress = tokens[1];
-						int serverPort = Integer.parseInt(tokens[2]);
+			    		serverAddress = tokens[1];
+						serverPort = Integer.parseInt(tokens[2]);
 						this.newConnection(serverAddress, serverPort);
 			    	} catch (NumberFormatException nfe) {
-			    		printError("No valid address. Port must be a number!");
+						printError("No valid address. Port must be a number!");
+						logger.info("Unable to parse argument <port>", nfe);
 			    	} catch (UnknownHostException e) {
-			    		printError("Unknown Host!");
+						printError("Unknown Host!");
+						logger.info("Unknown Host!", e);
 			    	} catch (IOException e) {
-			    		printError("Could not establish connection!");
-			    	} catch (Exception e) {}
+						printError("Could not establish connection!");
+						logger.warn("Could not establish connection!", e);
+			    	} catch (Exception e) {
+						// TODO: Remove this?
+						logger.warn(e);
+						e.printStackTrace();
+					}
 			    } else {
 			    	printError("Invalid number of parameters!");
 			    }
 				break;
 			case "put":
-                if(tokens.length == 3) {
+                if(tokens.length >= 3) {
 			    	if(this.store != null && this.store.isRunning()){
 						String key = tokens[1];
-						String value = tokens[2];
+						StringBuilder value = new StringBuilder();
+						for(int i = 2; i < tokens.length; i++) {
+							value.append(tokens[i]);
+							if (i != tokens.length -1 ) {
+								value.append(" ");
+							}
+						}
 						try {
-							KVMessage message = this.store.put(key, value);
-						} catch(Exception e) {
-							this.logger.error(e);
+							KVSimpleMessage message = this.store.put(key, value.toString());
+							this.handleNewMessage(message);
+						} catch (IOException e) {
+							printError("Unable to send message!");
+							this.store.disconnect();
+						} catch (Exception e) {
+							// TODO: Remove this?
+							logger.warn(e);
 							e.printStackTrace();
 						}
-                        
 			    	} else {
 			    		this.printError("Not connected!");
 			    	}
@@ -87,12 +109,16 @@ public class KVClient implements IKVClient {
 			    	if(this.store != null && this.store.isRunning()){
 						String key = tokens[1];
 						try {
-							KVMessage message = this.store.get(key);
-						} catch(Exception e) {
-							this.logger.error(e);
+							KVSimpleMessage message = this.store.get(key);
+							this.handleNewMessage(message);
+						} catch (IOException e) {
+							printError("Unable to send message!");
+							this.store.disconnect();
+						} catch (Exception e) {
+							// TODO: Remove this?
+							logger.warn(e);
 							e.printStackTrace();
 						}
-                        
 			    	} else {
 			    		this.printError("Not connected!");
 			    	}
@@ -127,8 +153,9 @@ public class KVClient implements IKVClient {
     }
 
     @Override
-    public void newConnection(String hostname, int port) throws UnknownHostException, IOException {
-        this.store = new KVStore(hostname, port);
+    public void newConnection(String hostname, int port) throws Exception {
+		this.store = new KVStore(hostname, port);
+		this.store.addListener(this);
         this.store.connect();
     }
 
@@ -197,7 +224,30 @@ public class KVClient implements IKVClient {
 			return LogSetup.UNKNOWN_LEVEL;
 		}
 	}
-    
+	
+	public void handleNewMessage(KVSimpleMessage msg) {
+		if(!stop) {
+			System.out.println(msg.getMsg());
+			System.out.print(PROMPT);
+		}
+	}
+
+	public void handleStatus(SocketStatus status) {
+		if(status == SocketStatus.CONNECTED) {
+
+		} else if (status == SocketStatus.DISCONNECTED) {
+			System.out.print(PROMPT);
+			System.out.println("Connection terminated: " 
+					+ serverAddress + " / " + serverPort);
+			
+		} else if (status == SocketStatus.CONNECTION_LOST) {
+			System.out.println("Connection lost: " 
+					+ serverAddress + " / " + serverPort);
+			System.out.print(PROMPT);
+		}
+		
+	}
+
     private void printError(String error){
 		System.out.println(PROMPT + "Error! " +  error);
     }

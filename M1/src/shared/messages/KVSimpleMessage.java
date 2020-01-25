@@ -23,7 +23,9 @@ public class KVSimpleMessage implements Serializable, KVMessage {
 		this.key = key;
 		this.value = value;
 
-		this.msg = this.status + " " + this.key + " " + this.value;
+		this.msg = this.status.toString();
+		if(this.key != null) this.msg += " " + this.key;
+		if(this.value != null) this.msg += " " + this.value;
 		this.msg.trim();
 
 		this.msgBytes = toByteArray(this.msg);
