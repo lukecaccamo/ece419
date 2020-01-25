@@ -16,7 +16,10 @@
 .mtj.tmp/
 
 # Package Files #
-*.jar
+echoClient.jar
+echoServer.jar
+m1-client.jar
+m1-server.jar
 *.war
 *.nar
 *.ear
