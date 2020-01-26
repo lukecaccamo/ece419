@@ -37,11 +37,14 @@ public class KVClient implements IKVClient {
 			} catch (IOException e) {
 				this.stop = true;
 				printError("CLI does not respond - Application terminated ");
+			} catch (Exception e) {
+				this.logger.error(e);
+				e.printStackTrace();
 			}
 		}
     }
     
-    private void handleCommand(String cmdLine) {
+    private void handleCommand(String cmdLine) throws Exception {
         String[] tokens = cmdLine.split("\\s+");
 
         switch (tokens[0]) {
@@ -65,11 +68,7 @@ public class KVClient implements IKVClient {
 			    	} catch (IOException e) {
 						printError("Could not establish connection!");
 						logger.warn("Could not establish connection!", e);
-			    	} catch (Exception e) {
-						// TODO: Remove this?
-						logger.warn(e);
-						e.printStackTrace();
-					}
+			    	}
 			    } else {
 			    	printError("Invalid number of parameters!");
 			    }
@@ -91,10 +90,6 @@ public class KVClient implements IKVClient {
 						} catch (IOException e) {
 							printError("Unable to send message!");
 							this.store.disconnect();
-						} catch (Exception e) {
-							// TODO: Remove this?
-							logger.warn(e);
-							e.printStackTrace();
 						}
 			    	} else {
 			    		this.printError("Not connected!");
@@ -113,10 +108,6 @@ public class KVClient implements IKVClient {
 						} catch (IOException e) {
 							printError("Unable to send message!");
 							this.store.disconnect();
-						} catch (Exception e) {
-							// TODO: Remove this?
-							logger.warn(e);
-							e.printStackTrace();
 						}
 			    	} else {
 			    		this.printError("Not connected!");

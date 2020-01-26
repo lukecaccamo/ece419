@@ -110,11 +110,11 @@ public class KVServer implements IKVServer, Runnable {
 
 		running = initializeServer();
 
-		if(serverSocket != null) {
+		if(this.serverSocket != null) {
 			while(isRunning()){
 				try {
 
-					Socket client = serverSocket.accept();
+					Socket client = this.serverSocket.accept();
 					KVCommModule connection = new KVCommModule(client, this);
 					new Thread(connection).start();
 
@@ -137,7 +137,13 @@ public class KVServer implements IKVServer, Runnable {
 
 	@Override
     public void close(){
-		// TODO Auto-generated method stub
+		this.running = false;
+        try {
+			this.serverSocket.close();
+		} catch (IOException e) {
+			logger.error("Error! " +
+					"Unable to close socket on port: " + this.getPort(), e);
+		}
 	}
 
 	private boolean isRunning() {
@@ -147,9 +153,9 @@ public class KVServer implements IKVServer, Runnable {
 	private boolean initializeServer() {
 		logger.info("Initialize server ...");
 		try {
-			serverSocket = new ServerSocket(port);
+			this.serverSocket = new ServerSocket(port);
 			logger.info("Server listening on port: "
-					+ serverSocket.getLocalPort());
+					+ this.serverSocket.getLocalPort());
 			return true;
 
 		} catch (IOException e) {
