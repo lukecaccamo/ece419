@@ -5,14 +5,14 @@ import java.util.Map;
 
 public class LRUCache implements IKVCache{
 
-    private int cacheSize;
+    private int maxSize;
     private LinkedHashMap<String, String> cache;
 
     public LRUCache(int cacheSize){
-        this.cacheSize = cacheSize;
+        this.maxSize = cacheSize;
         cache = new LinkedHashMap<String, String>(cacheSize, (float) 1, true){
             protected boolean removeEldestEntry(Map.Entry<String, String> eldest){
-                return size() > cacheSize;
+                return size() > maxSize;
             }
         };
     }

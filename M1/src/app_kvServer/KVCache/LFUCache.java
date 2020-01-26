@@ -2,11 +2,6 @@ package app_kvServer.KVCache;
 
 import java.util.*;
 
-class Entry{
-    String key;
-    int count;
-}
-
 public class LFUCache implements IKVCache{
 
     private int cacheSize;
@@ -26,7 +21,7 @@ public class LFUCache implements IKVCache{
         countToKeys = new HashMap<>();
         // init to empty list of keys
         // lowest freq possible is 1
-        countToKeys.put(1, new LinkedHashSet<>());
+        countToKeys.put(1, new LinkedHashSet<String>());
     }
 
     @Override
