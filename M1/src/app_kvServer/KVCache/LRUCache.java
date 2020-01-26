@@ -24,8 +24,11 @@ public class LRUCache implements IKVCache{
 
     @Override
     public void put(String key, String value) {
-        // value = null case?
-        cache.put(key, value);
+        if (value.equals("null")){
+            cache.remove(key);
+        } else {
+            cache.put(key, value);
+        }
     }
 
     @Override

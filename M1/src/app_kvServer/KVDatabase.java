@@ -50,6 +50,17 @@ public class KVDatabase {
     }
 
     public void put(String key, String value){
+        if (value.equals("null")){
+            String sql = "DELETE FROM KVPAIRS WHERE KEY = ?";
+            try (PreparedStatement pstmt = c.prepareStatement(sql)) {
+                pstmt.setString(1, key);
+                pstmt.executeUpdate();
+            } catch (SQLException e) {
+                System.out.println(e.getMessage());
+            }
+            return;
+        }
+
         String sql = "INSERT INTO KVPAIRS(KEY, VALUE) VALUES(?,?)";
 
         try (PreparedStatement pstmt = c.prepareStatement(sql)) {

@@ -24,7 +24,11 @@ public class FIFOCache implements IKVCache {
 
     @Override
     public void put(String key, String value) {
-        cache.put(key, value);
+        if (value.equals("null")){
+            cache.remove(key);
+        } else {
+            cache.put(key, value);
+        }
     }
 
     @Override

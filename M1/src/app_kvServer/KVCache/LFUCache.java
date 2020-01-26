@@ -53,26 +53,35 @@ public class LFUCache implements IKVCache{
 
     @Override
     public void put(String key, String value) {
-        // just updating, no need to evict
-        if (cache.containsKey(key)){
-            cache.put(key, value);
-            get(key); //update the frequency
+        if (cacheSize <= 0){
             return;
+        }
+        if (value.equals("null")){
+            cache.remove(key);
+            int currCount = counts.get(key);
+            counts.remove(key);
+            countToKeys.get(currCount).remove(key);
         } else {
-            // if it doesn't exist, evict least frequent IF we are at max
-            if (cache.size() >= cacheSize){
-                // get one key from countToKeys[min] and remove from cache
-                LinkedHashSet<String> list = countToKeys.get(min);
-                String evictedKey = list.iterator().next();
-                cache.remove(evictedKey);
-                counts.remove(evictedKey);
+            // just updating, no need to evict
+            if (cache.containsKey(key)){
+                cache.put(key, value);
+                get(key); //update the frequency
+                return;
+            } else {
+                // if it doesn't exist, evict least frequent IF we are at max
+                if (cache.size() >= cacheSize) {
+                    // get one key from countToKeys[min] and remove from cache
+                    String evictedKey = countToKeys.get(min).iterator().next();
+                    cache.remove(evictedKey);
+                    counts.remove(evictedKey);
+                }
+                // new key, add to countToKeys[1]
+                cache.put(key, value);
+                counts.put(key, 1);
+                // this new entry is now the new min
+                min = 1;
+                countToKeys.get(1).add(key);
             }
-            // new key, add to countToKeys[1]
-            cache.put(key, value);
-            counts.put(key, 1);
-            // this new entry is now the new min
-            min = 1;
-            countToKeys.get(1).add(key);
         }
     }
 
