@@ -155,7 +155,6 @@ public class KVClient implements IKVClient {
     @Override
     public void newConnection(String hostname, int port) throws Exception {
 		this.store = new KVStore(hostname, port);
-		this.store.addListener(this);
         this.store.connect();
     }
 
