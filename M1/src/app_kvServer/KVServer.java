@@ -132,13 +132,20 @@ public class KVServer implements IKVServer, Runnable {
 
 	@Override
     public void kill(){
-		// TODO Auto-generated method stub
+		this.running = false;
+        try {
+			this.serverSocket.close();
+		} catch (IOException e) {
+			logger.error("Error! " +
+					"Unable to close socket on port: " + this.getPort(), e);
+		}
 	}
 
 	@Override
     public void close(){
 		this.running = false;
         try {
+			// TODO: Destroy all generated threads and close connections.
 			this.serverSocket.close();
 		} catch (IOException e) {
 			logger.error("Error! " +
