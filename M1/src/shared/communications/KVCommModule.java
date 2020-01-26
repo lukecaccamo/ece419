@@ -10,6 +10,8 @@ import java.util.Set;
 import app_kvServer.KVServer;
 import org.apache.log4j.Logger;
 
+import shared.exceptions.GetException;
+import shared.exceptions.PutException;
 import shared.messages.KVMessage;
 import shared.messages.KVMessage.StatusType;
 import shared.messages.KVSimpleMessage;
@@ -26,6 +28,7 @@ public class KVCommModule implements Runnable {
 	
 	private static final int BUFFER_SIZE = 1024;
 	private static final int DROP_SIZE = 1024 * BUFFER_SIZE;
+	private static final String DELETE_VALUE = "null";
 
 	private String serverAddress;
 	private int serverPort;
@@ -61,25 +64,45 @@ public class KVCommModule implements Runnable {
 
 						case GET:
 							value = server.getKV(key);
-							sendKVMessage(StatusType.GET_SUCCESS, key, value);
+
+							if (value == null) {
+								sendKVMessage(StatusType.GET_ERROR, key, null);
+							} else {
+								sendKVMessage(StatusType.GET_SUCCESS, key, value);
+							}
+
 							break;
 
 						case PUT:
+
+							status = StatusType.PUT_SUCCESS;
+
+							if(value.equals(DELETE_VALUE))
+								status = StatusType.DELETE_SUCCESS;
+							else if(server.inCache(key) || server.inStorage(key))
+								status = StatusType.PUT_UPDATE;
+
 							server.putKV(key, value);
-							sendKVMessage(value.equals("null") ? StatusType.DELETE_SUCCESS : StatusType.PUT_SUCCESS, key, value);
+
+							sendKVMessage(status, key, value);
+
 							break;
 					}
-
-
 
 					/* connection either terminated by the client or lost due to
 					 * network problems*/
 				} catch (IOException ioe) {
 					logger.error("Error! Connection lost!");
 					running = false;
-				} catch (Exception ex) {
-					sendKVMessage(StatusType.GET_ERROR, null, null);
-					sendKVMessage(StatusType.PUT_ERROR, null, null);
+				} catch (PutException pex) {
+					sendKVMessage(StatusType.PUT_ERROR, pex.getKey(), pex.getValue());
+					logger.error(pex.getMessage());
+				} catch (GetException gex) {
+					sendKVMessage(StatusType.GET_ERROR, gex.getKey(), null);
+					logger.error(gex.getMessage());
+				} catch (Exception ex){
+					sendKVMessage(StatusType.FAILED, ex.getMessage(), null);
+					logger.error(ex.getMessage());
 				}
 			}
 
@@ -216,13 +239,7 @@ public class KVCommModule implements Runnable {
 		switch (status) {
 
 			case GET:
-				ret = new KVSimpleMessage(status, tokens[1], null);
-				break;
-
-			case PUT:
-				ret = new KVSimpleMessage(status, tokens[1], tokens[2]);
-				break;
-
+			case GET_ERROR:
 			case DELETE_SUCCESS:
 				ret = new KVSimpleMessage(status, tokens[1], null);
 				break;

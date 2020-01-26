@@ -4,6 +4,8 @@ import logger.LogSetup;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import shared.communications.KVCommModule;
+import shared.exceptions.GetException;
+import shared.exceptions.PutException;
 
 import java.io.IOException;
 import java.net.*;
@@ -80,12 +82,17 @@ public class KVServer implements IKVServer, Runnable {
 	@Override
     public String getKV(String key) throws Exception{
 		// TODO Auto-generated method stub
+		if (key.equals("error"))
+			throw new GetException(key, "GET failed unexpectedly!");
+
 		return "value";
 	}
 
 	@Override
     public void putKV(String key, String value) throws Exception{
 		// TODO Auto-generated method stub
+		if (key.equals("error"))
+			throw new PutException(key, value, "PUT failed unexpectedly!");
 	}
 
 	@Override
