@@ -38,7 +38,7 @@ public class KVServer implements IKVServer, Runnable {
 	
 	@Override
 	public int getPort(){
-		return this.port;
+		return this.serverSocket.getLocalPort();
 	}
 
 	@Override

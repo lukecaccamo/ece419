@@ -1,12 +1,15 @@
 package client;
 
+import java.net.Socket;
+
 import shared.messages.KVMessage.StatusType;
 import shared.communications.KVCommModule;
 import shared.messages.KVSimpleMessage;
 
-import app_kvClient.KVClient;
-
 public class KVStore implements KVCommInterface {
+
+	private String serverAddress;
+	private int serverPort;
 
 	private KVCommModule communications;
 
@@ -16,11 +19,14 @@ public class KVStore implements KVCommInterface {
 	 * @param port the port of the KVServer
 	 */
 	public KVStore(String address, int port) {
-		this.communications = new KVCommModule(address, port);
+		this.serverAddress = address;
+		this.serverPort = port;
 	}
 
 	@Override
 	public void connect() throws Exception {
+		Socket socket = new Socket(this.serverAddress, this.serverPort);
+		this.communications = new KVCommModule(socket, null);
 		this.communications.connect();
 	}
 
@@ -35,10 +41,6 @@ public class KVStore implements KVCommInterface {
 
 	public void setRunning(boolean run) {
 		this.communications.setRunning(run);
-	}
-
-	public void addListener(KVClient listener){
-		this.communications.addListener(listener);
 	}
 
 	@Override

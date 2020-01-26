@@ -25,7 +25,7 @@ public class KVCommModule implements Runnable {
 	private Set<KVClient> listeners;
 	private boolean running;
 
-	private Socket storeSocket;
+	private Socket socket;
 	private OutputStream output;
  	private InputStream input;
 	
@@ -37,34 +37,23 @@ public class KVCommModule implements Runnable {
 
 	/**
 	 * Initialize KVCommModule with address and port of KVServer
-	 * @param address the address of the KVServer
-	 * @param port the port of the KVServer
-	 */
-	public KVCommModule(String address, int port) {
-		this.serverAddress = address;
-		this.serverPort = port;
-		this.listeners = new HashSet<KVClient>();
-		this.setRunning(true);
-    }
-
-	/**
-	 * Initialize KVCommModule with address and port of KVServer
 	 * @param socket socket for the KVServer
 	 */
 	public KVCommModule(Socket socket, KVServer server) {
-		this.storeSocket = socket;
+		this.socket = socket;
 		this.server = server;
-		this.serverAddress = socket.getInetAddress().getHostAddress();
-		this.serverPort = socket.getLocalPort();
+		this.serverAddress = this.socket.getInetAddress().getHostAddress();
+		this.serverPort = this.socket.getLocalPort();
 		this.listeners = new HashSet<KVClient>();
 		this.setRunning(true);
+		logger.info("Connection established");
 	}
 
 	// Called by server only
 	public void run() {
 		try {
-			output = storeSocket.getOutputStream();
-			input = storeSocket.getInputStream();
+			output = this.socket.getOutputStream();
+			input = this.socket.getInputStream();
 
 			while(running) {
 				try {
@@ -106,10 +95,10 @@ public class KVCommModule implements Runnable {
 		} finally {
 
 			try {
-				if (storeSocket != null) {
+				if (this.socket != null) {
 					input.close();
 					output.close();
-					storeSocket.close();
+					this.socket.close();
 				}
 			} catch (IOException ioe) {
 				logger.error("Error! Unable to tear down connection!", ioe);
@@ -118,11 +107,8 @@ public class KVCommModule implements Runnable {
 	}
 
 	public void connect() throws Exception {
-		this.storeSocket = new Socket(this.serverAddress, this.serverPort);
-		this.output = this.storeSocket.getOutputStream();
-		this.input = this.storeSocket.getInputStream();
-		this.setRunning(true);
-		logger.info("Connection established");
+		this.output = this.socket.getOutputStream();
+		this.input = this.socket.getInputStream();
 	}
 
 	public void disconnect() {
@@ -141,11 +127,11 @@ public class KVCommModule implements Runnable {
 	private void tearDownConnection() throws IOException {
 		setRunning(false);
 		logger.info("tearing down the connection ...");
-		if (this.storeSocket != null) {
+		if (this.socket != null) {
 			//input.close();
 			//output.close();
-			this.storeSocket.close();
-			this.storeSocket = null;
+			this.socket.close();
+			this.socket = null;
 			logger.info("connection closed!");
 		}
 	}
