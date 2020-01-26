@@ -170,6 +170,10 @@ public class KVCommModule implements Runnable {
 	 * @throws IOException some I/O error regarding the output stream
 	 */
 	public void sendKVMessage(StatusType status, String key, String value) throws IOException {
+
+		if (value != null && value.isEmpty())
+			value = DELETE_VALUE;
+
 		KVSimpleMessage msg = new KVSimpleMessage(status, key, value);
 		byte[] msgBytes = msg.getMsgBytes();
 		this.output.write(msgBytes, 0, msgBytes.length);
@@ -233,7 +237,17 @@ public class KVCommModule implements Runnable {
 		
 		/* build final String */
 		String msg = new String(msgBytes).trim();
+
 		String[] tokens = msg.split("\\s+");
+
+		//NEED TO ASSEMBLE VALUE PROPERLY
+		StringBuilder value = new StringBuilder();
+		for(int i = 2; i < tokens.length; i++) {
+			value.append(tokens[i]);
+			if (i != tokens.length - 1 ) {
+				value.append(" ");
+			}
+		}
 
 		KVSimpleMessage ret = new KVSimpleMessage(StatusType.NONE, null, null);
 
@@ -250,7 +264,7 @@ public class KVCommModule implements Runnable {
 				break;
 
 			default:
-				ret = new KVSimpleMessage(status, tokens[1], tokens[2]);
+				ret = new KVSimpleMessage(status, tokens[1], value.toString());
 		}
 
 		logger.info("Receive message:\t '" + ret.getMsg() + "'");

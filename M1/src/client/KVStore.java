@@ -10,9 +10,10 @@ public class KVStore implements KVCommInterface {
 
 	private String serverAddress;
 	private int serverPort;
-
 	private KVCommModule communications;
 
+	private static final int MAX_KEY = 20;
+	private static final int MAX_VALUE = 122880;
 	/**
 	 * Initialize KVStore with address and port of KVServer
 	 * @param address the address of the KVServer
@@ -41,12 +42,30 @@ public class KVStore implements KVCommInterface {
 
 	@Override
 	public KVSimpleMessage put(String key, String value) throws Exception {
+
+		if (key.length() > MAX_KEY || key.isEmpty())
+			return new KVSimpleMessage(StatusType.PUT_ERROR, "Key cannot be greater than 20 bytes or empty", null);
+
+		if (key.contains(" "))
+			return new KVSimpleMessage(StatusType.PUT_ERROR, "Key cannot contain spaces", null);
+
+		if (value.length() > MAX_VALUE)
+			return new KVSimpleMessage(StatusType.PUT_ERROR, "Value cannot be greater than 120 kilobytes", null);
+
+
 		this.communications.sendKVMessage(StatusType.PUT, key, value);
 		return this.communications.receiveKVMessage();
 	}
 
 	@Override
 	public KVSimpleMessage get(String key) throws Exception {
+
+		if (key.length() > MAX_KEY || key.isEmpty())
+			return new KVSimpleMessage(StatusType.GET_ERROR, "Key cannot be greater than 20 bytes or empty", null);
+
+		if (key.contains(" "))
+			return new KVSimpleMessage(StatusType.GET_ERROR, "Key cannot contain spaces", null);
+
 		this.communications.sendKVMessage(StatusType.GET, key, null);
 		return this.communications.receiveKVMessage();
 	}

@@ -134,4 +134,90 @@ public class AdditionalTest extends TestCase {
 		assertEquals(KVMessage.StatusType.DELETE_ERROR, response.getStatus());
 	}
 
+	@Test
+	public void testPutWithSpacesInValue() {
+		String key = "unique";
+		String value = "bar2 bar3";
+		KVMessage response = null;
+		Exception ex = null;
+
+		try {
+			response = kvClient.put(key, value);
+		} catch (Exception e) {
+			ex = e;
+		}
+
+		assertNull(ex);
+		assertEquals(KVMessage.StatusType.PUT_SUCCESS, response.getStatus());
+		assertEquals(value, response.getValue());
+	}
+
+	@Test
+	public void testPutWithSpacesInKey() {
+		String key = "uni que";
+		String value = "bar2";
+		KVMessage response = null;
+		Exception ex = null;
+
+		try {
+			response = kvClient.put(key, value);
+		} catch (Exception e) {
+			ex = e;
+		}
+
+		assertNull(ex);
+		assertEquals(KVMessage.StatusType.PUT_ERROR, response.getStatus());
+	}
+
+	@Test
+	public void testPutWithEmptyKey() {
+		String key = "";
+		String value = "bar2";
+		KVMessage response = null;
+		Exception ex = null;
+
+		try {
+			response = kvClient.put(key, value);
+		} catch (Exception e) {
+			ex = e;
+		}
+
+		assertNull(ex);
+		assertEquals(KVMessage.StatusType.PUT_ERROR, response.getStatus());
+	}
+
+	@Test
+	public void testPutWithLongKey() {
+		String key = "uniqueuniqueuniqueuniqueunique";
+		String value = "bar2 bar3";
+		KVMessage response = null;
+		Exception ex = null;
+
+		try {
+			response = kvClient.put(key, value);
+		} catch (Exception e) {
+			ex = e;
+		}
+
+		assertNull(ex);
+		assertEquals(KVMessage.StatusType.PUT_ERROR, response.getStatus());
+	}
+
+	@Test
+	public void testDeleteWithEmptyValue() {
+		String key = "plsDelete";
+		String value = "deleteMe";
+		KVMessage response = null;
+		Exception ex = null;
+
+		try {
+			kvClient.put(key, value);
+			response = kvClient.put(key, "");
+		} catch (Exception e) {
+			ex = e;
+		}
+
+		assertNull(ex);
+		assertEquals(KVMessage.StatusType.DELETE_SUCCESS, response.getStatus());
+	}
 }

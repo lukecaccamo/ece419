@@ -80,7 +80,7 @@ public class KVClient implements IKVClient {
 						StringBuilder value = new StringBuilder();
 						for(int i = 2; i < tokens.length; i++) {
 							value.append(tokens[i]);
-							if (i != tokens.length -1 ) {
+							if (i != tokens.length - 1 ) {
 								value.append(" ");
 							}
 						}
