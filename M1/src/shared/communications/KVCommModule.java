@@ -10,6 +10,7 @@ import java.util.Set;
 import app_kvServer.KVServer;
 import org.apache.log4j.Logger;
 
+import shared.exceptions.DeleteException;
 import shared.exceptions.GetException;
 import shared.exceptions.PutException;
 import shared.messages.KVMessage;
@@ -97,6 +98,9 @@ public class KVCommModule implements Runnable {
 				} catch (PutException pex) {
 					sendKVMessage(StatusType.PUT_ERROR, pex.getKey(), pex.getValue());
 					logger.error(pex.getMessage());
+				} catch (DeleteException dex) {
+					sendKVMessage(StatusType.DELETE_ERROR, dex.getKey(), null);
+					logger.error(dex.getMessage());
 				} catch (GetException gex) {
 					sendKVMessage(StatusType.GET_ERROR, gex.getKey(), null);
 					logger.error(gex.getMessage());
@@ -241,6 +245,7 @@ public class KVCommModule implements Runnable {
 			case GET:
 			case GET_ERROR:
 			case DELETE_SUCCESS:
+			case DELETE_ERROR:
 				ret = new KVSimpleMessage(status, tokens[1], null);
 				break;
 

@@ -5,6 +5,7 @@ import org.junit.Test;
 
 import client.KVStore;
 import junit.framework.TestCase;
+import shared.messages.KVMessage;
 
 public class AdditionalTest extends TestCase {
 
@@ -113,4 +114,24 @@ public class AdditionalTest extends TestCase {
 
 		assertTrue(return_value.equals(value) && inCache);
 	}
+
+	@Test
+	public void testDeleteNonexistingKey() {
+		String key = "deleteTestValue";
+
+		KVMessage response = null;
+		Exception ex = null;
+
+		try {
+
+			response = kvClient.put(key, "null");
+
+		} catch (Exception e) {
+			ex = e;
+		}
+
+		assertNull(ex);
+		assertEquals(KVMessage.StatusType.DELETE_ERROR, response.getStatus());
+	}
+
 }

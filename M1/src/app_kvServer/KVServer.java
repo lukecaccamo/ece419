@@ -8,6 +8,7 @@ import logger.LogSetup;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import shared.communications.KVCommModule;
+import shared.exceptions.DeleteException;
 import shared.exceptions.GetException;
 import shared.exceptions.PutException;
 
@@ -25,7 +26,7 @@ public class KVServer implements IKVServer, Runnable {
 	private boolean running;
 	private IKVCache cache;
 	private KVDatabase db;
-
+	private static final String DELETE_VAL = "null";
 	/**
 	 * Start KV Server at given port
 	 * @param port given port for storage server to operate
@@ -41,23 +42,21 @@ public class KVServer implements IKVServer, Runnable {
 		this.port = port;
 		this.cacheSize = cacheSize;
 		this.strategy = strategy;
-		new Thread(this).start();
 
-		switch(this.strategy){
-			case "LRU":
+		switch(CacheStrategy.valueOf(strategy)){
+			case LRU:
 				cache = new LRUCache(this.cacheSize);
-			case "FIFO":
+			case FIFO:
 				cache = new FIFOCache(this.cacheSize);
-			case "LFU":
+			case LFU:
 				cache = new LFUCache(this.cacheSize);
-			case "None":
-				break;
+			case None:
 			default:
 				//logger error
 				break;
-
 		}
 
+		new Thread(this).start();
 		//db = new KVDatabase();
 
 	}
@@ -83,7 +82,7 @@ public class KVServer implements IKVServer, Runnable {
 
 	@Override
     public CacheStrategy getCacheStrategy(){
-		return IKVServer.CacheStrategy.valueOf(this.strategy);
+		return CacheStrategy.valueOf(this.strategy);
 	}
 
 	@Override
@@ -109,46 +108,50 @@ public class KVServer implements IKVServer, Runnable {
 
 	@Override
     public String getKV(String key) throws Exception{
-		// TODO Auto-generated method stub
-		if (key.equals("error"))
-			throw new GetException(key, "GET failed unexpectedly!");
 
-		if (getCacheStrategy() != CacheStrategy.None) {
-			String cache_return = cache.get(key);
-			if (cache_return != null) {
+		try {
 
-				return cache_return;
+			if (key.equals("error"))
+				throw new NullPointerException();
+
+			if (getCacheStrategy() != CacheStrategy.None) {
+				String cache_return = cache.get(key);
+				if (cache_return != null) {
+
+					return cache_return;
+				}
 			}
+
+		} catch (Exception ex) {
+			throw new GetException(key, "GET failed unexpectedly!");
 		}
 
-		/*String db_return = db.get(key);
-		if (db_return != null){
-			cache.put(key, db_return);
-		}
-
-
-		return db_return;*/
 		return null;
 	}
 
 	@Override
     public void putKV(String key, String value) throws Exception{
-		// TODO Auto-generated method stub
-		if (key.equals("error"))
-			throw new PutException(key, value, "PUT failed unexpectedly!");
 
-		if (getCacheStrategy() != CacheStrategy.None) {
-			//System.out.println("In cache");
-			cache.put(key, value);
+		try {
+
+			if (key.equals("error"))
+				throw new NullPointerException();
+
+			if (getCacheStrategy() != CacheStrategy.None) {
+				cache.put(key, value);
+			}
+
+		} catch(Exception ex) {
+			if (value.equals(DELETE_VAL)){
+				throw new DeleteException(key, "DELETE failed unexpectedly!");
+			} else {
+				throw new PutException(key, value, "PUT failed unexpectedly!");
+			}
 		}
-
-		//System.out.println("In DB");
-		//db.put(key, value);
 	}
 
 	@Override
     public void clearCache(){
-		// TODO Auto-generated method stub
 		if (getCacheStrategy() != CacheStrategy.None) {
 			cache.clear();
 		}
@@ -156,7 +159,6 @@ public class KVServer implements IKVServer, Runnable {
 
 	@Override
     public void clearStorage(){
-		// TODO Auto-generated method stub
 		//db.clear();
 	}
 
