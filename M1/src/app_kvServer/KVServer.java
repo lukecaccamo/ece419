@@ -24,6 +24,7 @@ public class KVServer implements IKVServer, Runnable {
 	private ServerSocket serverSocket;
 	private boolean running;
 	private IKVCache cache;
+	private KVDatabase db;
 
 	/**
 	 * Start KV Server at given port
@@ -49,9 +50,15 @@ public class KVServer implements IKVServer, Runnable {
 				cache = new FIFOCache(this.cacheSize);
 			case "LFU":
 				cache = new LFUCache(this.cacheSize);
+			case "None":
+				break;
 			default:
-				cache = new LRUCache(this.cacheSize);
+				//logger error
+				break;
+
 		}
+
+		db = new KVDatabase();
 
 	}
 	
@@ -87,12 +94,15 @@ public class KVServer implements IKVServer, Runnable {
 	@Override
     public boolean inStorage(String key){
 		// TODO Auto-generated method stub
-		return false;
+		return db.get(key) != null;
 	}
 
 	@Override
     public boolean inCache(String key){
 		// TODO Auto-generated method stub
+		if (getCacheStrategy() == CacheStrategy.None){
+			return false;
+		}
 		return cache.get(key) != null;
 	}
 
@@ -101,7 +111,20 @@ public class KVServer implements IKVServer, Runnable {
 		// TODO Auto-generated method stub
 		if (key.equals("error"))
 			throw new GetException(key, "GET failed unexpectedly!");
-		return cache.get(key);
+
+		if (getCacheStrategy() != CacheStrategy.None) {
+			String cache_return = cache.get(key);
+			if (cache_return != null) {
+				return cache_return;
+			}
+		}
+
+		String db_return = db.get(key);
+		if (db_return != null){
+			cache.put(key, db_return);
+		}
+		return db_return;
+
 	}
 
 	@Override
@@ -109,18 +132,26 @@ public class KVServer implements IKVServer, Runnable {
 		// TODO Auto-generated method stub
 		if (key.equals("error"))
 			throw new PutException(key, value, "PUT failed unexpectedly!");
-		cache.put(key, value);
+
+		if (getCacheStrategy() != CacheStrategy.None) {
+			cache.put(key, value);
+		}
+
+		db.put(key, value);
 	}
 
 	@Override
     public void clearCache(){
 		// TODO Auto-generated method stub
-		cache.clear();
+		if (getCacheStrategy() != CacheStrategy.None) {
+			cache.clear();
+		}
 	}
 
 	@Override
     public void clearStorage(){
 		// TODO Auto-generated method stub
+		db.clear();
 	}
 
 	@Override

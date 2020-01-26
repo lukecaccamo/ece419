@@ -98,18 +98,18 @@ public class AdditionalTest extends TestCase {
 		}
 
 		try {
-			return_value = kvServer.getKV(key);
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-
-		try {
 			kvServer.putKV(key2, value2);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 
 		inCache = kvServer.inCache(key);
+
+		try {
+			return_value = kvServer.getKV(key);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 
 		assertTrue(return_value.equals(value) && !inCache);
 	}
