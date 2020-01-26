@@ -107,7 +107,6 @@ public class AdditionalTest extends TestCase {
 
 		try {
 			return_value = kvServer.getKV(key);
-			System.out.println(return_value);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
