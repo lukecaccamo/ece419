@@ -145,6 +145,7 @@ public class KVServer implements IKVServer, Runnable {
     public void close(){
 		this.running = false;
         try {
+			// TODO: Destroy all generated threads and close connections.
 			this.serverSocket.close();
 		} catch (IOException e) {
 			logger.error("Error! " +
