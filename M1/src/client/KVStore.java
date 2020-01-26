@@ -39,10 +39,6 @@ public class KVStore implements KVCommInterface {
 		return this.communications.isRunning();
 	}
 
-	public void setRunning(boolean run) {
-		this.communications.setRunning(run);
-	}
-
 	@Override
 	public KVSimpleMessage put(String key, String value) throws Exception {
 		this.communications.sendKVMessage(StatusType.PUT, key, value);
