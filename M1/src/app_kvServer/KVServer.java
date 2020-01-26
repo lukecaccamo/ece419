@@ -1,5 +1,7 @@
 package app_kvServer;
 
+import app_kvServer.KVCache.IKVCache;
+import app_kvServer.KVCache.LRUCache;
 import logger.LogSetup;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
@@ -19,6 +21,7 @@ public class KVServer implements IKVServer, Runnable {
 	private int cacheSize;
 	private ServerSocket serverSocket;
 	private boolean running;
+	private IKVCache cache;
 
 	/**
 	 * Start KV Server at given port
@@ -36,6 +39,8 @@ public class KVServer implements IKVServer, Runnable {
 		this.cacheSize = cacheSize;
 		this.strategy = strategy;
 		new Thread(this).start();
+
+		cache = new LRUCache(this.cacheSize);
 	}
 	
 	@Override
@@ -76,7 +81,7 @@ public class KVServer implements IKVServer, Runnable {
 	@Override
     public boolean inCache(String key){
 		// TODO Auto-generated method stub
-		return false;
+		return cache.get(key) != null;
 	}
 
 	@Override
@@ -84,8 +89,7 @@ public class KVServer implements IKVServer, Runnable {
 		// TODO Auto-generated method stub
 		if (key.equals("error"))
 			throw new GetException(key, "GET failed unexpectedly!");
-
-		return "value";
+		return cache.get(key);
 	}
 
 	@Override
@@ -93,11 +97,13 @@ public class KVServer implements IKVServer, Runnable {
 		// TODO Auto-generated method stub
 		if (key.equals("error"))
 			throw new PutException(key, value, "PUT failed unexpectedly!");
+		cache.put(key, value);
 	}
 
 	@Override
     public void clearCache(){
 		// TODO Auto-generated method stub
+		cache.clear();
 	}
 
 	@Override

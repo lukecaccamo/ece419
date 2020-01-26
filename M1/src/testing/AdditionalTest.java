@@ -1,5 +1,6 @@
 package testing;
 
+import app_kvServer.KVServer;
 import org.junit.Test;
 
 import client.KVStore;
@@ -8,9 +9,11 @@ import junit.framework.TestCase;
 public class AdditionalTest extends TestCase {
 
 	private KVStore kvClient;
+	private KVServer kvServer;
 	
 	public void setUp() {
 		kvClient = new KVStore("localhost", 50000);
+		kvServer = new KVServer(50000, 1, "LRU");
 		try {
 			kvClient.connect();
 		} catch (Exception e) {
@@ -76,5 +79,38 @@ public class AdditionalTest extends TestCase {
 		}
 
 		assertNotNull(ex);
+	}
+
+	@Test
+	public void testPutGet() {
+		String key = "foo2";
+		String key2 = "foo3";
+		String value = "bar2";
+		String value2 = "bar3";
+		String return_value = null;
+		boolean inCache = true;
+
+		try {
+			kvServer.putKV(key, value);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
+		try {
+			return_value = kvServer.getKV(key);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
+		try {
+			kvServer.putKV(key2, value2);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
+		inCache = kvServer.inCache(key);
+		System.out.println(kvServer.getCacheSize());
+
+		assertTrue(return_value.equals(value) && !inCache);
 	}
 }
