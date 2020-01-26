@@ -24,6 +24,10 @@ public class LFUCache implements IKVCache{
         countToKeys.put(1, new LinkedHashSet<String>());
     }
 
+    public boolean inCache(String key){
+        return cache.containsKey(key);
+    }
+
     @Override
     public String get(String key) {
         if (cache.containsKey(key)){
@@ -39,7 +43,7 @@ public class LFUCache implements IKVCache{
             if (countToKeys.get(count).size() == 0 && count == min){
                 min++;
             }
-            if (countToKeys.containsKey(count + 1)){
+            if (!countToKeys.containsKey(count + 1)){
                 LinkedHashSet<String> newList = new LinkedHashSet<>();
                 countToKeys.put(count + 1, newList);
             }

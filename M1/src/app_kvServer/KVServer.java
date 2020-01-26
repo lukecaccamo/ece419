@@ -58,7 +58,7 @@ public class KVServer implements IKVServer, Runnable {
 
 		}
 
-		db = new KVDatabase();
+		//db = new KVDatabase();
 
 	}
 	
@@ -94,7 +94,8 @@ public class KVServer implements IKVServer, Runnable {
 	@Override
     public boolean inStorage(String key){
 		// TODO Auto-generated method stub
-		return db.get(key) != null;
+		//return db.get(key) != null;
+		return false;
 	}
 
 	@Override
@@ -103,7 +104,7 @@ public class KVServer implements IKVServer, Runnable {
 		if (getCacheStrategy() == CacheStrategy.None){
 			return false;
 		}
-		return cache.get(key) != null;
+		return cache.inCache(key);
 	}
 
 	@Override
@@ -115,16 +116,19 @@ public class KVServer implements IKVServer, Runnable {
 		if (getCacheStrategy() != CacheStrategy.None) {
 			String cache_return = cache.get(key);
 			if (cache_return != null) {
+
 				return cache_return;
 			}
 		}
 
-		String db_return = db.get(key);
+		/*String db_return = db.get(key);
 		if (db_return != null){
 			cache.put(key, db_return);
 		}
-		return db_return;
 
+
+		return db_return;*/
+		return null;
 	}
 
 	@Override
@@ -134,10 +138,12 @@ public class KVServer implements IKVServer, Runnable {
 			throw new PutException(key, value, "PUT failed unexpectedly!");
 
 		if (getCacheStrategy() != CacheStrategy.None) {
+			//System.out.println("In cache");
 			cache.put(key, value);
 		}
 
-		db.put(key, value);
+		//System.out.println("In DB");
+		//db.put(key, value);
 	}
 
 	@Override
@@ -151,7 +157,7 @@ public class KVServer implements IKVServer, Runnable {
 	@Override
     public void clearStorage(){
 		// TODO Auto-generated method stub
-		db.clear();
+		//db.clear();
 	}
 
 	@Override

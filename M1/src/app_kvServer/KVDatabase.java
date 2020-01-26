@@ -22,6 +22,7 @@ public class KVDatabase {
                     " VALUE           TEXT    NOT NULL)";
             stmt.executeUpdate(sql);
             stmt.close();
+            clear();
         } catch ( Exception e ) {
             System.err.println( e.getClass().getName() + ": " + e.getMessage() );
             System.exit(0);

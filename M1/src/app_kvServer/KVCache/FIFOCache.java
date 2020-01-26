@@ -18,6 +18,11 @@ public class FIFOCache implements IKVCache {
     }
 
     @Override
+    public boolean inCache(String key){
+        return cache.containsKey(key);
+    }
+
+    @Override
     public String get(String key) {
         return cache.get(key);
     }
