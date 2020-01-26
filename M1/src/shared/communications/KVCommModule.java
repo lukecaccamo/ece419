@@ -14,15 +14,10 @@ import shared.messages.KVMessage;
 import shared.messages.KVMessage.StatusType;
 import shared.messages.KVSimpleMessage;
 
-import app_kvClient.KVClient;
-
 public class KVCommModule implements Runnable {
-
-	public enum SocketStatus{CONNECTED, DISCONNECTED, CONNECTION_LOST};
 
 	private Logger logger = Logger.getRootLogger();
 	private KVServer server;
-	private Set<KVClient> listeners;
 	private boolean running;
 
 	private Socket socket;
@@ -44,7 +39,6 @@ public class KVCommModule implements Runnable {
 		this.server = server;
 		this.serverAddress = this.socket.getInetAddress().getHostAddress();
 		this.serverPort = this.socket.getLocalPort();
-		this.listeners = new HashSet<KVClient>();
 		this.setRunning(true);
 		logger.info("Connection established");
 	}
@@ -116,9 +110,6 @@ public class KVCommModule implements Runnable {
 		
 		try {
 			tearDownConnection();
-			for(KVClient listener : this.listeners) {
-				listener.handleStatus(SocketStatus.DISCONNECTED);
-			}
 		} catch (IOException ioe) {
 			logger.error("Unable to close connection!");
 		}
@@ -142,10 +133,6 @@ public class KVCommModule implements Runnable {
 
 	public void setRunning(boolean run) {
 		this.running = run;
-	}
-
-	public void addListener(KVClient listener){
-		this.listeners.add(listener);
 	}
 
 	/**
