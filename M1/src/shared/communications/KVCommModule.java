@@ -7,8 +7,10 @@ import java.net.Socket;
 import java.util.HashSet;
 import java.util.Set;
 
+import app_kvServer.KVServer;
 import org.apache.log4j.Logger;
 
+import shared.messages.KVMessage;
 import shared.messages.KVMessage.StatusType;
 import shared.messages.KVSimpleMessage;
 
@@ -19,6 +21,7 @@ public class KVCommModule implements Runnable {
 	public enum SocketStatus{CONNECTED, DISCONNECTED, CONNECTION_LOST};
 
 	private Logger logger = Logger.getRootLogger();
+	private KVServer server;
 	private Set<KVClient> listeners;
 	private boolean running;
 
@@ -41,12 +44,78 @@ public class KVCommModule implements Runnable {
 		this.serverAddress = address;
 		this.serverPort = port;
 		this.listeners = new HashSet<KVClient>();
-		this.setRunning(false);
+		this.setRunning(true);
     }
-    
-    public void run() {
 
-    }
+	/**
+	 * Initialize KVCommModule with address and port of KVServer
+	 * @param socket socket for the KVServer
+	 */
+	public KVCommModule(Socket socket, KVServer server) {
+		this.storeSocket = socket;
+		this.server = server;
+		this.serverAddress = socket.getInetAddress().getHostAddress();
+		this.serverPort = socket.getLocalPort();
+		this.listeners = new HashSet<KVClient>();
+		this.setRunning(true);
+	}
+
+	// Called by server only
+	public void run() {
+		try {
+			output = storeSocket.getOutputStream();
+			input = storeSocket.getInputStream();
+
+			while(running) {
+				try {
+
+					KVMessage msg = receiveKVMessage();
+					StatusType status = msg.getStatus();
+					String key = msg.getKey();
+					String value = msg.getValue();
+
+					switch (status) {
+
+						case GET:
+							value = server.getKV(key);
+							sendKVMessage(StatusType.GET_SUCCESS, key, value);
+							break;
+
+						case PUT:
+							server.putKV(key, value);
+							sendKVMessage(value.equals("null") ? StatusType.DELETE_SUCCESS : StatusType.PUT_SUCCESS, key, value);
+							break;
+					}
+
+
+
+					/* connection either terminated by the client or lost due to
+					 * network problems*/
+				} catch (IOException ioe) {
+					logger.error("Error! Connection lost!");
+					running = false;
+				} catch (Exception ex) {
+					sendKVMessage(StatusType.GET_ERROR, null, null);
+					sendKVMessage(StatusType.PUT_ERROR, null, null);
+				}
+			}
+
+		} catch (IOException ioe) {
+			logger.error("Error! Connection could not be established!", ioe);
+
+		} finally {
+
+			try {
+				if (storeSocket != null) {
+					input.close();
+					output.close();
+					storeSocket.close();
+				}
+			} catch (IOException ioe) {
+				logger.error("Error! Unable to tear down connection!", ioe);
+			}
+		}
+	}
 
 	public void connect() throws Exception {
 		this.storeSocket = new Socket(this.serverAddress, this.serverPort);
@@ -95,8 +164,10 @@ public class KVCommModule implements Runnable {
 
 	/**
 	 * Method sends a KVMessage using this socket.
-	 * @param msg the message that is to be sent.
-	 * @throws IOException some I/O error regarding the output stream 
+	 * @param status the status of the message to be sent.
+	 * @param key the key.
+	 * @param value the value.
+	 * @throws IOException some I/O error regarding the output stream
 	 */
 	public void sendKVMessage(StatusType status, String key, String value) throws IOException {
 		KVSimpleMessage msg = new KVSimpleMessage(status, key, value);
@@ -163,8 +234,32 @@ public class KVCommModule implements Runnable {
 		/* build final String */
 		String msg = new String(msgBytes).trim();
 		String[] tokens = msg.split("\\s+");
-		KVSimpleMessage ret = new KVSimpleMessage(StatusType.valueOf(tokens[0]), null, null);
+
+		KVSimpleMessage ret = new KVSimpleMessage(StatusType.NONE, null, null);
+
+		//handle message types
+		StatusType status = StatusType.valueOf(tokens[0]);
+
+		switch (status) {
+
+			case GET:
+				ret = new KVSimpleMessage(status, tokens[1], null);
+				break;
+
+			case PUT:
+				ret = new KVSimpleMessage(status, tokens[1], tokens[2]);
+				break;
+
+			case DELETE_SUCCESS:
+				ret = new KVSimpleMessage(status, tokens[1], null);
+				break;
+
+			default:
+				ret = new KVSimpleMessage(status, tokens[1], tokens[2]);
+		}
+
 		logger.info("Receive message:\t '" + ret.getMsg() + "'");
 		return ret;
     }
+
 }

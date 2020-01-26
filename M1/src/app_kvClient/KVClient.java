@@ -23,7 +23,7 @@ public class KVClient implements IKVClient {
     private BufferedReader stdin;
     private KVStore store = null;
 	private boolean stop = false;
-	
+
 	private String serverAddress;
 	private int serverPort;
 
@@ -224,7 +224,7 @@ public class KVClient implements IKVClient {
 			return LogSetup.UNKNOWN_LEVEL;
 		}
 	}
-	
+
 	public void handleNewMessage(KVSimpleMessage msg) {
 		if(!stop) {
 			System.out.println(msg.getMsg());
@@ -237,15 +237,15 @@ public class KVClient implements IKVClient {
 
 		} else if (status == SocketStatus.DISCONNECTED) {
 			System.out.print(PROMPT);
-			System.out.println("Connection terminated: " 
+			System.out.println("Connection terminated: "
 					+ serverAddress + " / " + serverPort);
-			
+
 		} else if (status == SocketStatus.CONNECTION_LOST) {
-			System.out.println("Connection lost: " 
+			System.out.println("Connection lost: "
 					+ serverAddress + " / " + serverPort);
 			System.out.print(PROMPT);
 		}
-		
+
 	}
 
     private void printError(String error){

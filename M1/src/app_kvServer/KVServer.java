@@ -3,6 +3,7 @@ package app_kvServer;
 import logger.LogSetup;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import shared.communications.KVCommModule;
 
 import java.io.IOException;
 import java.net.*;
@@ -32,17 +33,17 @@ public class KVServer implements IKVServer, Runnable {
 		this.port = port;
 		this.cacheSize = cacheSize;
 		this.strategy = strategy;
+		new Thread(this).start();
 	}
 	
 	@Override
 	public int getPort(){
-		// TODO Auto-generated method stub
 		return this.port;
 	}
 
 	@Override
     public String getHostname() {
-		// TODO Auto-generated method stub
+
 		String host = null;
 
 		try {
@@ -56,14 +57,11 @@ public class KVServer implements IKVServer, Runnable {
 
 	@Override
     public CacheStrategy getCacheStrategy(){
-		// TODO Auto-generated method stub
-
 		return IKVServer.CacheStrategy.valueOf(this.strategy);
 	}
 
 	@Override
     public int getCacheSize(){
-		// TODO Auto-generated method stub
 		return this.cacheSize;
 	}
 
@@ -82,7 +80,7 @@ public class KVServer implements IKVServer, Runnable {
 	@Override
     public String getKV(String key) throws Exception{
 		// TODO Auto-generated method stub
-		return "";
+		return "value";
 	}
 
 	@Override
@@ -110,7 +108,7 @@ public class KVServer implements IKVServer, Runnable {
 				try {
 
 					Socket client = serverSocket.accept();
-					KVClientConnection connection = new KVClientConnection(client);
+					KVCommModule connection = new KVCommModule(client, this);
 					new Thread(connection).start();
 
 					logger.info("Connected to "
@@ -172,7 +170,6 @@ public class KVServer implements IKVServer, Runnable {
 				String strategy = args[2];
 
 				KVServer server = new KVServer(port, cacheSize, strategy);
-				new Thread(server).start();
 			}
 		} catch (IOException e) {
 			System.out.println("Error! Unable to initialize logger!");
