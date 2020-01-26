@@ -1,6 +1,8 @@
 package app_kvServer;
 
+import app_kvServer.KVCache.FIFOCache;
 import app_kvServer.KVCache.IKVCache;
+import app_kvServer.KVCache.LFUCache;
 import app_kvServer.KVCache.LRUCache;
 import logger.LogSetup;
 import org.apache.log4j.Level;
@@ -40,7 +42,17 @@ public class KVServer implements IKVServer, Runnable {
 		this.strategy = strategy;
 		new Thread(this).start();
 
-		cache = new LRUCache(this.cacheSize);
+		switch(this.strategy){
+			case "LRU":
+				cache = new LRUCache(this.cacheSize);
+			case "FIFO":
+				cache = new FIFOCache(this.cacheSize);
+			case "LFU":
+				cache = new LFUCache(this.cacheSize);
+			default:
+				cache = new LRUCache(this.cacheSize);
+		}
+
 	}
 	
 	@Override

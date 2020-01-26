@@ -13,7 +13,7 @@ public class AdditionalTest extends TestCase {
 	
 	public void setUp() {
 		kvClient = new KVStore("localhost", 50000);
-		kvServer = new KVServer(50000, 1, "LRU");
+		kvServer = new KVServer(50000, 1, "LFU");
 		try {
 			kvClient.connect();
 		} catch (Exception e) {
@@ -83,6 +83,7 @@ public class AdditionalTest extends TestCase {
 
 	@Test
 	public void testPutGet() {
+
 		String key = "foo2";
 		String key2 = "foo3";
 		String value = "bar2";
@@ -109,7 +110,6 @@ public class AdditionalTest extends TestCase {
 		}
 
 		inCache = kvServer.inCache(key);
-		System.out.println(kvServer.getCacheSize());
 
 		assertTrue(return_value.equals(value) && !inCache);
 	}
