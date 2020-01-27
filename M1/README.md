@@ -25,12 +25,19 @@ The following caching strategies can be configured:
     3. FIFO - First in First Out
     4. None - All key value pairs are written directly to persistent storage.
 
-When the cache size is exceeded the cache manager evicts entries from the cache based on
-the set policy and saves them to persistent storage. Persistent storage is a simple
-.db file of key value entries. Each entry consists of 1 valid byte, 4 bytes for the key length, 4 bytes for value length, 
+When the cache size is exceeded the cache manager evicts entries from the cache based on the eviction policy. 
+We implemented LRU and FIFO caches using the data structure LinkedHashMap. This map orders entries in a doubly linked list in either insertion or access order.
+We can implement FIFO using removeEldestEntry() when the length => cache size with insertion order and the same for LRU
+with access order. To implement LFU cache, we use a variable to keep track of min count, a hashmap for key->value, another hashmap for key->counts,
+and another hashmap counts->list of keys with that same specific count. Using the min count, we evict one key with a min count.
+We used this approach, instead of a min heap, for a O(1) insert and deletion time.
+
+
+Persistent storage is a simple .db file of key value entries. Each entry consists of 1 valid byte, 4 bytes for the key length, 4 bytes for value length, 
 a maximum of 20 bytes for the key string, and a maximum of 128000 bytes for value (since server 
- should be able to take messages of 128kB). The location of the key in the file is saved for quick lookup
-and deletion.
+should be able to take messages of 128kB). Each new entry is appended to the end of the .db file.
+To enable quick lookup, we have a separate hashmap that maps the key to the entry location in the .db file.
+This hash map is saved in a .txt file every new entry or deletion.
 
 ### Storage Client
 
