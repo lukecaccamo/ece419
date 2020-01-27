@@ -191,7 +191,8 @@ public class KVServer implements IKVServer, Runnable {
     public void kill(){
 		this.running = false;
         try {
-			this.serverSocket.close();
+			if(this.serverSocket != null && !this.serverSocket.isClosed())
+				this.serverSocket.close();
 		} catch (IOException e) {
 			logger.error("Error! " +
 					"Unable to close socket on port: " + this.getPort(), e);
@@ -203,7 +204,8 @@ public class KVServer implements IKVServer, Runnable {
 		this.running = false;
         try {
 			// TODO: Destroy all generated threads and close connections.
-			this.serverSocket.close();
+			if(this.serverSocket != null && !this.serverSocket.isClosed())
+				this.serverSocket.close();
 		} catch (IOException e) {
 			logger.error("Error! " +
 					"Unable to close socket on port: " + this.getPort(), e);

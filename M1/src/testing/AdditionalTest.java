@@ -3,9 +3,11 @@ package testing;
 import app_kvServer.KVServer;
 import org.junit.Test;
 
+import app_kvClient.KVClient;
 import client.KVStore;
 import junit.framework.TestCase;
 import shared.messages.KVMessage;
+import shared.messages.KVMessage.StatusType;
 
 public class AdditionalTest extends TestCase {
 
@@ -26,7 +28,7 @@ public class AdditionalTest extends TestCase {
 	
 	// TODO: add your test cases, at least 3
 	@Test
-	public void testStoreDisconnect() {
+	public void testClientDisconnect() {
 		
 		Exception ex = null;
 		
@@ -42,7 +44,7 @@ public class AdditionalTest extends TestCase {
 	}
 
 	@Test
-	public void testMultipleStoreConnectSuccess() {
+	public void testMultipleClientConnectSuccess() {
 		Exception ex = null;
 		KVStore[] kvClients = new KVStore[10];
 
@@ -65,6 +67,69 @@ public class AdditionalTest extends TestCase {
 		}
 		assertNull(ex);
 	}
+	
+	@Test
+	public void testMultipleClientPutSuccess() {
+		String key = "foofoo";
+		String value = "bar";
+		Exception ex = null;
+		KVStore[] kvClients = new KVStore[10];
+		KVMessage[] kvMessages = new KVMessage[10];
+
+		for(int i = 0; i < 10; i++) {
+			kvClients[i] = new KVStore("localhost", 50000);
+			try {
+				kvClients[i].connect();
+				kvMessages[i] = kvClients[i].put(key + Integer.toString(i), value);
+			} catch (Exception e) {
+				ex = e;
+			}
+		}
+		assertNull(ex);
+
+		for(int i = 0; i < 10; i++) {
+			try {
+				assertTrue(kvMessages[i].getStatus() == StatusType.PUT_SUCCESS);
+				kvClients[i].disconnect();
+			} catch (Exception e) {
+				ex = e;
+			}
+		}
+		assertNull(ex);
+	}
+
+	@Test
+	public void testPersistence() {
+		KVServer kvServer = new KVServer(50001, 10, "FIFO");
+
+		String key = "foo2";
+		String value = "bar2";
+		String storedValue = null;
+		KVMessage message = null;
+		Exception ex = null;
+
+		try {
+			kvServer.putKV(key, value);
+			storedValue = kvServer.getKV(key);
+		} catch (Exception e) {
+			ex = e;
+		}
+		assertTrue(ex == null && storedValue == value);
+
+		kvServer.kill();
+		kvServer = null;
+		storedValue = null;
+		kvServer = new KVServer(50002, 10, "FIFO");
+
+		try {
+			kvServer.putKV(key, value);
+			storedValue = kvServer.getKV(key);
+		} catch (Exception e) {
+			ex = e;
+		}
+		
+		assertTrue(ex == null && storedValue == value);
+	}
 
 	@Test
 	public void testGetDisconnected() {
@@ -83,7 +148,7 @@ public class AdditionalTest extends TestCase {
 
 	@Test
 	public void testPutGet() {
-		kvServer = new KVServer(5000, 2, "LFU");
+		kvServer = new KVServer(50003, 2, "LFU");
 		String key = "foo2";
 		String key2 = "foo3";
 		String value = "bar2";
