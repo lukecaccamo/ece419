@@ -236,7 +236,7 @@ public class KVCommModule implements Runnable {
 		msgBytes = tmp;
 		
 		/* build final String */
-		String msg = new String(msgBytes).trim();
+		String msg = new String(msgBytes);
 
 		String[] tokens = msg.split("\\s+");
 

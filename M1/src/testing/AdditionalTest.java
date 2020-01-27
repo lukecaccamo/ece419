@@ -251,9 +251,9 @@ public class AdditionalTest extends TestCase {
 		}
 
 		assertNull(ex);
-		assertEquals(KVMessage.StatusType.PUT_SUCCESS, response.getStatus());
 		assertEquals(value, return_value);
 		assertEquals(value, response.getValue());
+		assertEquals(KVMessage.StatusType.PUT_SUCCESS, response.getStatus());
 	}
 
 	@Test
