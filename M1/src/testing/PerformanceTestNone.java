@@ -14,8 +14,8 @@ public class PerformanceTestNone extends TestCase {
 
 	private KVStore kvClient;
 	private KVServer kvServer;
-	private int NUM_OPS = 20000;
-	private int CACHE_SIZE = 20000;
+	private int NUM_OPS = 5000;
+	private int CACHE_SIZE = 0;
 
 	private String POLICY = "None";
 

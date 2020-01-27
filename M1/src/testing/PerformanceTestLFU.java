@@ -14,8 +14,8 @@ public class PerformanceTestLFU extends TestCase {
 
 	private KVStore kvClient;
 	private KVServer kvServer;
-	private int NUM_OPS = 20000;
-	private int CACHE_SIZE = 20000;
+	private int NUM_OPS = 5000;
+	private int CACHE_SIZE = 1000;
 	private String POLICY = "LFU";
 
 	public void tearDown() {

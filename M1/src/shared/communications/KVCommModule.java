@@ -245,7 +245,6 @@ public class KVCommModule implements Runnable {
 
 		String[] tokens = msg.split("\\s+");
 
-		//NEED TO ASSEMBLE VALUE PROPERLY
 		StringBuilder value = new StringBuilder();
 		for(int i = 2; i < tokens.length; i++) {
 			value.append(tokens[i]);

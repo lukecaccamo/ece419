@@ -22,10 +22,10 @@ public class PerformanceTests {
 	
 	public static Test suite() {
 		TestSuite perfSuite = new TestSuite("Performance Test-Suite");
-		perfSuite.addTestSuite(PerformanceTestLRU.class);
-		perfSuite.addTestSuite(PerformanceTestLFU.class);
-		perfSuite.addTestSuite(PerformanceTestFIFO.class);
-		//perfSuite.addTestSuite(PerformanceTestNone.class);
+		//perfSuite.addTestSuite(PerformanceTestLRU.class);
+		//perfSuite.addTestSuite(PerformanceTestLFU.class);
+		//perfSuite.addTestSuite(PerformanceTestFIFO.class);
+		perfSuite.addTestSuite(PerformanceTestNone.class);
 		return perfSuite;
 	}
 	

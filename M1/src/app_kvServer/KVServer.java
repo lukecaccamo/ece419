@@ -38,7 +38,7 @@ public class KVServer implements IKVServer, Runnable {
 	 *           and "LFU".
 	 */
 	public KVServer(int port, int cacheSize, String strategy) {
-		// TODO Auto-generated method stub
+
 		this.port = port;
 		this.cacheSize = cacheSize;
 		this.strategy = strategy;
@@ -65,7 +65,13 @@ public class KVServer implements IKVServer, Runnable {
 	
 	@Override
 	public int getPort(){
-		return this.serverSocket.getLocalPort();
+		int port = 0;
+
+		if (serverSocket != null){
+			port = serverSocket.getLocalPort();
+		}
+
+		return port;
 	}
 
 	@Override
