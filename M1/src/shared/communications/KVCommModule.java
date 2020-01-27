@@ -80,10 +80,15 @@ public class KVCommModule implements Runnable {
 
 							if(value.equals(DELETE_VALUE))
 								status = StatusType.DELETE_SUCCESS;
-							else if(server.inCache(key) || server.inStorage(key))
+							else if(server.inCache(key) || server.inStorage(key)) {
+								//System.out.println(server.inCache(key));
+								//System.out.println(server.inStorage(key));
 								status = StatusType.PUT_UPDATE;
+							}
 
 							server.putKV(key, value);
+
+
 
 							sendKVMessage(status, key, value);
 

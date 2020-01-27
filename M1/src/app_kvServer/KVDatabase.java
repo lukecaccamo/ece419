@@ -23,8 +23,8 @@ public class KVDatabase {
     private String indexFile = "index.txt";
     private String databaseFile = "databaseFile.db";
     //byte for valid, 4 bytes per lengths (ints)
-    private Integer entryLength = 1 + 4 + 4 + 32 + 2048;
-    private Map<String, Integer> index;
+    private Integer entryLength = 1 + 4 + 4 + 20 + 128000;
+    private HashMap<String, Integer> index;
 
     public KVDatabase() {
         // Map<String, Long> index = new HashMap<String, long>();
@@ -44,20 +44,22 @@ public class KVDatabase {
         }
     }
 
-    public Map loadIndex(){
+    public HashMap<String, Integer> loadIndex(){
         File tmp = new File(indexFile);
         if (!tmp.exists()){
             // don't have to make new index file here because it is created in saveIndex
-            return new ConcurrentHashMap<String, Integer>();
+            return new HashMap<String, Integer>();
         }
 
-        Map<String, Integer> map = null;
+        HashMap<String, Integer> map = null;
         try {
             FileInputStream fileIn = new FileInputStream(indexFile);
             ObjectInputStream objectIn = new ObjectInputStream(fileIn);
-            map = (ConcurrentHashMap<String, Integer>) objectIn.readObject();
+            map = (HashMap<String, Integer>) objectIn.readObject();
             fileIn.close();
             objectIn.close();
+            //System.out.println("Index loaded");
+            //System.out.println(map);
             return map;
         } catch (Exception ex) {
             ex.printStackTrace();
@@ -72,6 +74,7 @@ public class KVDatabase {
 
     public String get(String key) throws IOException {
         Integer start = index.get(key);
+        //System.out.println(start);
         if (start != null){
             String value = getValue(start);
             return value;
@@ -88,7 +91,7 @@ public class KVDatabase {
         raf.seek(start + 1 + 4);
         int valueSize = raf.readInt();
 
-        raf.seek(start + 1 + 8 + 32);
+        raf.seek(start + 1 + 8 + 20);
         byte[] value = new byte[valueSize];
         raf.readFully(value);
         raf.close();
@@ -119,8 +122,11 @@ public class KVDatabase {
         raf.writeInt(key.length());
         raf.writeInt(value.length());
         raf.writeBytes(key);
-        raf.seek(indexLoc + entryLength - 2048);
+        raf.seek(indexLoc + entryLength - 128000);
         raf.writeBytes(value);
+
+
+        //System.out.println(raf.length());
         raf.close();
 
         index.put(key, (int) indexLoc);
@@ -150,14 +156,17 @@ public class KVDatabase {
     }
 
 
-    public boolean saveIndex(){
+    public boolean saveIndex() {
         try {
+
+            //System.out.println(index);
             FileOutputStream fileOut = new FileOutputStream(indexFile,false);
             ObjectOutputStream objectOut = new ObjectOutputStream(fileOut);
             objectOut.writeObject(index);
             objectOut.close();
             fileOut.close();
             logger.info("Index saved");
+            //System.out.println("Index saved");
         } catch (IOException i) {
             logger.error("Error! Saving index");
 

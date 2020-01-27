@@ -136,13 +136,17 @@ public class AdditionalTest extends TestCase {
 
 		kvServer = new KVServer(50002, 10, "FIFO");
 
+		File file = new File("databaseFile.db");
+		//System.out.println(file.exists());
+
 		try {
 			storedValue = kvServer.getKV(key);
 		} catch (Exception e) {
 			ex = e;
 		}
+		//System.out.println(storedValue.equals((value)));
 		
-		assertTrue(ex == null && storedValue == value);
+		assertTrue(ex == null && storedValue.equals(value));
 	}
 
 	@Test

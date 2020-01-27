@@ -72,8 +72,10 @@ public class KVServer implements IKVServer, Runnable {
 
 		String host = null;
 
-		if (serverSocket != null){
-			host = serverSocket.getInetAddress().getHostName();
+		try {
+			host = InetAddress.getLocalHost().getHostName();
+		} catch (Exception ex) {
+			return null;
 		}
 
 		return host;
@@ -121,6 +123,7 @@ public class KVServer implements IKVServer, Runnable {
 			}
 
 			String db_return = db.get(key);
+			//System.out.println("here");
 			if (db_return != null){
 				cache.put(key, db_return);
 			}
@@ -143,7 +146,7 @@ public class KVServer implements IKVServer, Runnable {
 				cache.put(key, value);
 			}
 
-			//System.out.println("In DB");
+
 			db.put(key, value);
 		} catch(Exception ex) {
 			if (value.equals(DELETE_VAL)){
