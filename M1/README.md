@@ -26,7 +26,9 @@ The following caching strategies can be configured:
 
 When the cache size is exceeded the cache manager evicts entries from the cache based on
 the set policy and saves them to persistent storage. Persistent storage is a simple
-text file of key value pairs. The location of the key in the file is saved for quick lookup
+.db file of key value entries. Each entry consists of 1 valid byte, 4 bytes for the key length, 4 bytes for value length, 
+a maximum of 20 bytes for the key string, and a maximum of 128000 bytes for value (since server 
+ should be able to take messages of 128kB). The location of the key in the file is saved for quick lookup
 and deletion.
 
 ### Storage Client

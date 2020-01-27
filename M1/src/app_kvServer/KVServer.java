@@ -51,6 +51,7 @@ public class KVServer implements IKVServer, Runnable {
 			case LFU:
 				cache = new LFUCache(this.cacheSize);
 			case None:
+				break;
 			default:
 				//logger error
 				break;
@@ -110,10 +111,6 @@ public class KVServer implements IKVServer, Runnable {
     public String getKV(String key) throws Exception{
 
 		try {
-
-			if (key.equals("error"))
-				throw new NullPointerException();
-
 			if (getCacheStrategy() != CacheStrategy.None) {
 				String cache_return = cache.get(key);
 				if (cache_return != null) {
@@ -124,9 +121,10 @@ public class KVServer implements IKVServer, Runnable {
 
 			String db_return = db.get(key);
 			//System.out.println("here");
-			if (db_return != null){
+			if (db_return != null && getCacheStrategy() != CacheStrategy.None) {
 				cache.put(key, db_return);
 			}
+
 			return db_return;
 
 		} catch (Exception ex) {
@@ -138,9 +136,6 @@ public class KVServer implements IKVServer, Runnable {
     public void putKV(String key, String value) throws Exception{
 
 		try {
-
-			if (key.equals("error"))
-				throw new NullPointerException();
 
 			if (getCacheStrategy() != CacheStrategy.None) {
 				cache.put(key, value);
