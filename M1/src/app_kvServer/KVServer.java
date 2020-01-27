@@ -79,11 +79,8 @@ public class KVServer implements IKVServer, Runnable {
 
 		String host = null;
 
-		try {
-			host = InetAddress.getLocalHost().getHostName();
-		} catch (Exception ex) {
-			return null;
-		}
+		if (serverSocket != null)
+			host = serverSocket.getInetAddress().getHostName();
 
 		return host;
 	}
