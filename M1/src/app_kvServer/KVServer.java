@@ -56,6 +56,7 @@ public class KVServer implements IKVServer, Runnable {
 				break;
 		}
 
+		db = new KVDatabase();
 		new Thread(this).start();
 		//db = new KVDatabase();
 
@@ -93,8 +94,7 @@ public class KVServer implements IKVServer, Runnable {
 	@Override
     public boolean inStorage(String key){
 		// TODO Auto-generated method stub
-		//return db.get(key) != null;
-		return false;
+		return db.inStorage(key);
 	}
 
 	@Override
@@ -122,11 +122,15 @@ public class KVServer implements IKVServer, Runnable {
 				}
 			}
 
+			String db_return = db.get(key);
+			if (db_return != null){
+				cache.put(key, db_return);
+			}
+			return db_return;
+
 		} catch (Exception ex) {
 			throw new GetException(key, "GET failed unexpectedly!");
 		}
-
-		return null;
 	}
 
 	@Override
@@ -141,6 +145,8 @@ public class KVServer implements IKVServer, Runnable {
 				cache.put(key, value);
 			}
 
+			//System.out.println("In DB");
+			db.put(key, value);
 		} catch(Exception ex) {
 			if (value.equals(DELETE_VAL)){
 				throw new DeleteException(key, "DELETE failed unexpectedly!");
@@ -159,7 +165,8 @@ public class KVServer implements IKVServer, Runnable {
 
 	@Override
     public void clearStorage(){
-		//db.clear();
+		// TODO Auto-generated method stub
+		db.clear();
 	}
 
 	@Override

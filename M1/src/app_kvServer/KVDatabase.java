@@ -1,86 +1,184 @@
 package app_kvServer;
 
-import java.sql.*;
+import org.apache.log4j.Logger;
 
+import java.io.*;
+import java.sql.*;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
+// serialize each KV entry
+// use randomaccessfile.seek() to find starting point
+// starting point stored in another map Map<String, long> key, startingPoint
+// in the actual disk storage
+// 1 byte for valid
+// 4 bytes for key length
+// 4 bytes for value length
+//
 public class KVDatabase {
-    private Connection c;
+
+    private static Logger logger = Logger.getRootLogger();
+
+    private String indexFile = "index.txt";
+    private String databaseFile = "databaseFile.db";
+    //byte for valid, 4 bytes per lengths (ints)
+    private Integer entryLength = 1 + 4 + 4 + 32 + 2048;
+    private Map<String, Integer> index;
 
     public KVDatabase() {
-        connect();
+        // Map<String, Long> index = new HashMap<String, long>();
+        initDB();
+        index = loadIndex();
     }
 
-    public void connect() {
-        Statement stmt = null;
-
-        try {
-            Class.forName("org.sqlite.JDBC");
-            c = DriverManager.getConnection("jdbc:sqlite:test.db");
-
-            stmt = c.createStatement();
-            String sql = "CREATE TABLE IF NOT EXISTS KVPAIRS " +
-                    "(KEY TEXT PRIMARY KEY     NOT NULL," +
-                    " VALUE           TEXT    NOT NULL)";
-            stmt.executeUpdate(sql);
-            stmt.close();
-            clear();
-        } catch ( Exception e ) {
-            System.err.println( e.getClass().getName() + ": " + e.getMessage() );
-            System.exit(0);
-        }
-        // logger
-        // System.out.println("Opened database successfully");
-    }
-
-    public String get(String key) {
-        String sql = "SELECT VALUE " + "FROM KVPAIRS WHERE key == ?";
-        try (PreparedStatement pstmt = c.prepareStatement(sql)) {
-            pstmt.setString(1, key);
-            ResultSet rs = pstmt.executeQuery();
-
-            if (rs.next()){
-                return rs.getString("VALUE");
-            } else {
-                return null;
+    public void initDB(){
+        File database = new File(databaseFile);
+        if (!database.exists()){
+            try {
+                database.createNewFile();
+            } catch (IOException e) {
+                logger.error("Error! Couldn't create new db");
             }
+            logger.info("Created new db file");
+        }
+    }
 
-        } catch (SQLException e) {
-            System.out.println(e.getMessage());
+    public Map loadIndex(){
+        File tmp = new File(indexFile);
+        if (!tmp.exists()){
+            // don't have to make new index file here because it is created in saveIndex
+            return new ConcurrentHashMap<String, Integer>();
         }
 
+        Map<String, Integer> map = null;
+        try {
+            FileInputStream fileIn = new FileInputStream(indexFile);
+            ObjectInputStream objectIn = new ObjectInputStream(fileIn);
+            map = (ConcurrentHashMap<String, Integer>) objectIn.readObject();
+            fileIn.close();
+            objectIn.close();
+            return map;
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        }
+    }
+
+    public boolean inStorage(String key){
+        return index.containsKey(key);
+    }
+
+
+    public String get(String key) throws IOException {
+        Integer start = index.get(key);
+        if (start != null){
+            String value = getValue(start);
+            return value;
+        }
         return null;
     }
 
-    public void put(String key, String value){
-        if (value.equals("null")){
-            String sql = "DELETE FROM KVPAIRS WHERE KEY = ?";
-            try (PreparedStatement pstmt = c.prepareStatement(sql)) {
-                pstmt.setString(1, key);
-                pstmt.executeUpdate();
-            } catch (SQLException e) {
-                System.out.println(e.getMessage());
-            }
+    public String getValue(Integer start) throws IOException {
+        RandomAccessFile raf = new RandomAccessFile(databaseFile, "r");
+        raf.seek(start);
+        boolean valid = raf.readBoolean();
+        if (!valid) {return null;}
+
+        raf.seek(start + 1 + 4);
+        int valueSize = raf.readInt();
+
+        raf.seek(start + 1 + 8 + 32);
+        byte[] value = new byte[valueSize];
+        raf.readFully(value);
+        raf.close();
+        return new String(value);
+    }
+
+    private void writeKV(Integer start, String key, String value) throws IOException {
+        RandomAccessFile raf = new RandomAccessFile(databaseFile, "rw");
+        long indexLoc = 0;
+        if (start == -1) {
+            // new entry
+            indexLoc = raf.length();
+        } else {
+            indexLoc = start.longValue();
+        }
+
+        raf.seek(indexLoc);
+
+        if (value == "null"){
+            raf.writeBoolean(false);
+            raf.close();
+
+            index.remove(key);
             return;
         }
 
-        String sql = "INSERT INTO KVPAIRS(KEY, VALUE) VALUES(?,?)";
+        raf.writeBoolean(true);
+        raf.writeInt(key.length());
+        raf.writeInt(value.length());
+        raf.writeBytes(key);
+        raf.seek(indexLoc + entryLength - 2048);
+        raf.writeBytes(value);
+        raf.close();
 
-        try (PreparedStatement pstmt = c.prepareStatement(sql)) {
-            pstmt.setString(1, key);
-            pstmt.setString(2, value);
-            pstmt.executeUpdate();
-        } catch (SQLException e) {
-            System.out.println(e.getMessage());
+        index.put(key, (int) indexLoc);
+    }
+
+    public void put(String key, String value){
+
+        Integer start = index.get(key);
+        if (start != null){
+            // update existing
+            try {
+                writeKV(start, key, value);
+            } catch (IOException e) {
+                logger.error("Error! Write to disk");
+            }
+        } else {
+            //new entry
+            try {
+                //can also start from beginning of file and loop through until find invalid block
+                writeKV(-1, key, value);
+            } catch (IOException e) {
+                logger.error("Error! Write to disk");
+            }
         }
+
+        saveIndex();
+    }
+
+
+    public boolean saveIndex(){
+        try {
+            FileOutputStream fileOut = new FileOutputStream(indexFile,false);
+            ObjectOutputStream objectOut = new ObjectOutputStream(fileOut);
+            objectOut.writeObject(index);
+            objectOut.close();
+            fileOut.close();
+            logger.info("Index saved");
+        } catch (IOException i) {
+            logger.error("Error! Saving index");
+
+        }
+        return false;
     }
 
     public void clear() {
-        String sql = "DELETE FROM KVPAIRS";
-
-        try (PreparedStatement pstmt = c.prepareStatement(sql)) {
-            pstmt.executeUpdate();
-        } catch (SQLException e) {
-            System.out.println(e.getMessage());
+        if (index!=null){
+            index.clear();
         }
+
+        File file = new File(databaseFile);
+        file.delete();
+
+        file = new File(indexFile);
+        file.delete();
+
+        initDB();
+        index = loadIndex();
+
     }
 
 }
