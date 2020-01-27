@@ -9,6 +9,8 @@ import junit.framework.TestCase;
 import shared.messages.KVMessage;
 import shared.messages.KVMessage.StatusType;
 
+import java.io.File;
+
 public class AdditionalTest extends TestCase {
 
 	private KVStore kvClient;
@@ -20,10 +22,20 @@ public class AdditionalTest extends TestCase {
 			kvClient.connect();
 		} catch (Exception e) {
 		}
+		reset();
 	}
 
 	public void tearDown() {
 		kvClient.disconnect();
+
+	}
+
+	public void reset() {
+		File file = new File("databaseFile.db");
+		file.delete();
+
+		file = new File("index.txt");
+		file.delete();
 	}
 	
 	// TODO: add your test cases, at least 3
@@ -215,6 +227,32 @@ public class AdditionalTest extends TestCase {
 
 		assertNull(ex);
 		assertEquals(KVMessage.StatusType.PUT_SUCCESS, response.getStatus());
+		assertEquals(value, response.getValue());
+	}
+
+	@Test
+	public void testPutWithOnlySpaceInValue() {
+		String key = "unique1";
+		String value = " ";
+		KVMessage response = null;
+		Exception ex = null;
+		String return_value = null;
+
+		try {
+			response = kvClient.put(key, value);
+		} catch (Exception e) {
+			ex = e;
+		}
+
+		try {
+			return_value = kvServer.getKV(key);
+		} catch (Exception e) {
+			//ex = e;
+		}
+
+		assertNull(ex);
+		assertEquals(KVMessage.StatusType.PUT_SUCCESS, response.getStatus());
+		assertEquals(value, return_value);
 		assertEquals(value, response.getValue());
 	}
 
