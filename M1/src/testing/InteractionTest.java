@@ -7,12 +7,14 @@ import junit.framework.TestCase;
 import shared.messages.KVMessage;
 import shared.messages.KVMessage.StatusType;
 
+import java.io.File;
 
 public class InteractionTest extends TestCase {
 
 	private KVStore kvClient;
 	
 	public void setUp() {
+		reset();
 		kvClient = new KVStore("localhost", 50000);
 		try {
 			kvClient.connect();
@@ -23,10 +25,19 @@ public class InteractionTest extends TestCase {
 	public void tearDown() {
 		kvClient.disconnect();
 	}
+
+	public void reset() {
+		File file = new File("databaseFile.db");
+		file.delete();
+
+		file = new File("index.txt");
+		file.delete();
+	}
 	
 	
 	@Test
 	public void testPut() {
+		reset();
 		String key = "foo2";
 		String value = "bar2";
 		KVMessage response = null;
@@ -43,6 +54,7 @@ public class InteractionTest extends TestCase {
 	
 	@Test
 	public void testPutDisconnected() {
+		reset();
 		kvClient.disconnect();
 		String key = "foo";
 		String value = "bar";
@@ -59,6 +71,7 @@ public class InteractionTest extends TestCase {
 
 	@Test
 	public void testUpdate() {
+		reset();
 		String key = "updateTestValue";
 		String initialValue = "initial";
 		String updatedValue = "updated";
@@ -80,6 +93,7 @@ public class InteractionTest extends TestCase {
 	
 	@Test
 	public void testDelete() {
+		reset();
 		String key = "deleteTestValue";
 		String value = "toDelete";
 		
@@ -99,6 +113,7 @@ public class InteractionTest extends TestCase {
 	
 	@Test
 	public void testGet() {
+		reset();
 		String key = "foo";
 		String value = "bar";
 		KVMessage response = null;
@@ -116,6 +131,7 @@ public class InteractionTest extends TestCase {
 
 	@Test
 	public void testGetUnsetValue() {
+		reset();
 		String key = "an unset value";
 		KVMessage response = null;
 		Exception ex = null;

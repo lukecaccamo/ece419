@@ -41,6 +41,7 @@ public class AdditionalTest extends TestCase {
 	// TODO: add your test cases, at least 3
 	@Test
 	public void testClientDisconnect() {
+		reset();
 		
 		Exception ex = null;
 		
@@ -57,6 +58,8 @@ public class AdditionalTest extends TestCase {
 
 	@Test
 	public void testMultipleClientConnectSuccess() {
+		reset();
+
 		Exception ex = null;
 		KVStore[] kvClients = new KVStore[10];
 
@@ -82,6 +85,8 @@ public class AdditionalTest extends TestCase {
 	
 	@Test
 	public void testMultipleClientPutSuccess() {
+		reset();
+
 		String key = "foofoo";
 		String value = "bar";
 		Exception ex = null;
@@ -112,6 +117,8 @@ public class AdditionalTest extends TestCase {
 
 	@Test
 	public void testPersistence() {
+		reset();
+
 		KVServer kvServer = new KVServer(50001, 10, "FIFO");
 
 		String key = "foo2";
@@ -151,6 +158,8 @@ public class AdditionalTest extends TestCase {
 
 	@Test
 	public void testGetDisconnected() {
+		reset();
+
 		kvClient.disconnect();
 		String key = "foo";
 		Exception ex = null;
@@ -166,6 +175,8 @@ public class AdditionalTest extends TestCase {
 
 	@Test
 	public void testPutGet() {
+		reset();
+
 		kvServer = new KVServer(50003, 2, "LFU");
 		String key = "foo2";
 		String key2 = "foo3";
@@ -199,6 +210,8 @@ public class AdditionalTest extends TestCase {
 
 	@Test
 	public void testDeleteNonexistingKey() {
+		reset();
+
 		String key = "deleteTestValue";
 
 		KVMessage response = null;
@@ -218,6 +231,8 @@ public class AdditionalTest extends TestCase {
 
 	@Test
 	public void testPutWithSpacesInValue() {
+		reset();
+
 		String key = "unique";
 		String value = "bar2 bar3";
 		KVMessage response = null;
@@ -236,6 +251,8 @@ public class AdditionalTest extends TestCase {
 
 	@Test
 	public void testPutWithOnlySpaceInValue() {
+		reset();
+
 		String key = "unique1";
 		String value = " ";
 		KVMessage response = null;
@@ -262,6 +279,8 @@ public class AdditionalTest extends TestCase {
 
 	@Test
 	public void testPutWithSpacesInKey() {
+		reset();
+
 		String key = "uni que";
 		String value = "bar2";
 		KVMessage response = null;
@@ -279,6 +298,8 @@ public class AdditionalTest extends TestCase {
 
 	@Test
 	public void testPutWithEmptyKey() {
+		reset();
+
 		String key = "";
 		String value = "bar2";
 		KVMessage response = null;
@@ -296,6 +317,8 @@ public class AdditionalTest extends TestCase {
 
 	@Test
 	public void testPutWithLongKey() {
+		reset();
+
 		String key = "uniqueuniqueuniqueuniqueunique";
 		String value = "bar2 bar3";
 		KVMessage response = null;
@@ -313,6 +336,8 @@ public class AdditionalTest extends TestCase {
 
 	@Test
 	public void testDeleteWithEmptyValue() {
+		reset();
+
 		String key = "plsDelete";
 		String value = "deleteMe";
 		KVMessage response = null;
