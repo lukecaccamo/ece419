@@ -43,6 +43,8 @@ This hash map is saved in a .txt file every new entry or deletion.
 
 The KVClient is similar to the echoClient in milestone 0. We kept the user interface consistent with echoClient's user interface because it is functional, simple, and easily scalable for new features. KVStore currently acts as a wrapper for the communication module (KVCommModule), which is shared between KVStore and KVServer. KVStore might be expanded upon in future milestones and we decided it is a good idea for now to leave all communication logic in KVCommModule. The client-side KVCommModule primarily deals with socket connection, socket disconnection, socket error-handling, and sending/recieving messages.
 
+## Appendix
+
 ## Tests
 
 Additional tests:
