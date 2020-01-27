@@ -1,4 +1,5 @@
 # Milestone 1: Client and Persistent Storage Server
+By: Yi Zhou, Matthew Lee, Luke Caccamo
 
 ## Design
 The objective is to implement a persistent storage server with a key-value query interface. A cache is configured in the server's main memory for a small fraction of the data to allow for quick accesses for frequently used key-value pairs. These tasks require the development of components such as the communication protocol, storage server, and storage client. The design is explained below.
