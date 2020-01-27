@@ -19,8 +19,8 @@ to the client.
 ### Caching and Storage
 The following caching strategies can be configured:
 
-    1. LRU - Least recently used
-    2. LFU - Least frequently used
+    1. LRU - Least Recently Used
+    2. LFU - Least Frequently Used
     3. FIFO - First in First Out
     4. None - All key value pairs are written directly to persistent storage.
 
@@ -37,13 +37,17 @@ The KVClient is similar to the echoClient in milestone 0. We kept the user inter
 
 Additional tests:
 
-    1. testStoreDisconnect
+    1. testClientDisconnect
         Tests that the KVStore can connect and disconnect to the server.
-    2. testMultipleStoreConnectSuccess
+    2. testMultipleClientConnectSuccess
         Tests that multiple (10) KVStore clients can connect to the server.
-    3. testGetDisconnected
+    3. testMultipleClientPutSuccess
+        Tests that multiple (10) KVStore clients can successfully do a `PUT` request to the server.
+    4. testPersistence
+        Tests that persistence is working. Created new server with new key value pair and then killed said server and then checked if key value pair was still there.
+    5. testGetDisconnected
         Test that the get command fails if the client is not connected.
-    4. testPutGet
+    6. testPutGet
         Tests that put and get functions in KVServer function correctly.
         Checks the inCache function for consistency.
     
