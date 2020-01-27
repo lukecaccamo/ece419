@@ -217,7 +217,6 @@ public class KVClient implements IKVClient {
 	public void handleNewMessage(KVSimpleMessage msg) {
 		if(!stop) {
 			System.out.println(msg.getMsg());
-			System.out.print(PROMPT);
 		}
 	}
 

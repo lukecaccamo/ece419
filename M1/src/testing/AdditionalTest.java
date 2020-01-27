@@ -116,13 +116,15 @@ public class AdditionalTest extends TestCase {
 		}
 		assertTrue(ex == null && storedValue == value);
 
+		kvServer.clearCache();
 		kvServer.kill();
 		kvServer = null;
 		storedValue = null;
+		System.gc();
+
 		kvServer = new KVServer(50002, 10, "FIFO");
 
 		try {
-			kvServer.putKV(key, value);
 			storedValue = kvServer.getKV(key);
 		} catch (Exception e) {
 			ex = e;
