@@ -257,23 +257,22 @@ public class AdditionalTest extends TestCase {
 		String value = " ";
 		KVMessage response = null;
 		Exception ex = null;
-		String return_value = null;
+		String get = null;
 
 		try {
-			response = kvClient.put(key, value);
+			kvServer.putKV(key, value);
 		} catch (Exception e) {
 			ex = e;
 		}
 
 		try {
-			return_value = kvServer.getKV(key);
+			get = kvServer.getKV(key);
 		} catch (Exception e) {
 			//ex = e;
 		}
 
 		assertNull(ex);
-		assertEquals(value, return_value);
-		assertEquals(value, response.getValue());
+		assertEquals(value, get);
 		assertEquals(KVMessage.StatusType.PUT_SUCCESS, response.getStatus());
 	}
 
