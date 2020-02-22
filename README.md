@@ -368,3 +368,109 @@
   - A process sends `Election` message to all processes. The larger processes sends back the `Answer` message. The largest process identifier declares the victory and sends the `Coordination` message to smaller processes
   - Suppose process eventually recovers, process may determine that it has the highest identifier, thus, pronouncing itself leader
   - New process bullies current leader
+
+## Paxos Consensus Algorithm
+- Consensus problems: desire all nodes to agree on a value after one or more node proposed a value
+- Also known as problems of agreement
+- Challenges: reach consensus, even in the presence of node failures and unreliable networking
+- Requirements for consensus:
+  - Agreement: every correct node must agree on the same value
+  - Validity: only proposed values can be decided. If a node decides on some value, `V`, then some node must have proposed `V`.
+  - Integrity: each node can decide a value at most once.
+  - Termination: all correct nodes eventually decide on a value.
+- Paxos:
+  - Solves consensus in async systems, with node and network omission failures
+  - In async systems, even one node crashing, there is no guarantee to reach consensus
+  - Paxos guarantees safety, but not liveness. Paxos attempts to make progress even during periods when some bounded # of nodes are unresponsive
+- Assumptions:
+  - Nodes:
+    - Operate at arbitrary speeds
+    - May experience failures
+    - May rejoin protocol after faulures
+    - Do not collude, lie, or attempt to subvert the protocol (i.e. no Byzantine failures)
+  - Network:
+    - Nodes send messages to any other node via unicast
+    - Messages are sent async
+    - Messages lost, reordered, duplicated
+    - Network may partition
+    - Messages are delivered without corruption
+- Paxos is functional given `2 * f + 1` nodes
+- Despite the simultaneous failure of any `f` nodes (i.e. 5 nodes == resilient against 2 failing)
+- Roles:
+  - Client triggers protocol
+  - Single process may play one or more roles at the same time
+  - Has no effect on protocol correctness
+  - Roles are commmonly coalesced to improve latency, # of messages exchanged, etc.
+  - Express protocol in terms of roles:
+    - Proposer
+    - Acceptor
+    - Learner
+- High-level:
+  - Proposer sends a proposal message to acceptors
+  - Acceptors send a promise back if they can accept the prosposal
+  - If a proposer collects a majority of promises, it sets a value to the proposal and sends it to a majority of acceptors
+  - Acceptors send the decided value to all learners if they can accept the value
+  - Learners learn the decided value when they collect a majority of messages from acceptors for a given value
+- Ideas:
+  - Require multiple acceptors to tolerate faults
+  - Require votes on avalue from a majority of acceptors to break ties
+  - Need to allow for acceptors to cahnge their mind about the value they chose to establish a majority
+  - Require two-phased protocol to check for prior decisions
+  - Require means to order proposals to ensure single value results
+- The Paxos Way:
+  - Each acceptor may be able to accept multiple proposals based on ordering
+  - Each acceptor must follow two rules:
+    - If it promised to one proposal with an id of `n`, it can only accept a newer proposal `m`, where `m > n`
+    - If it promises to a newer proposal, it will ask the proposer to set the value of the newer proposal to the same vlaue as an older accepted proposal
+- Basic Paxos:
+  - Processes that interact with the Paxos protocol: do not participate in protocol
+  - Clients send requests to proposer and wait for response from learner
+  - The Basic Paxos decides which request is accepted
+  - The nature of requests depends on how Paxos is used
+- Role of proposers in Paxos:
+  - Convince acceptors to agree on client requests
+  - Refers to client request as values
+  - Proposer issues proposals for a value to ultimately obtain agreement from Paxos
+  - Several different client requests that are concurrently being proposed by different proposers
+  - One instance of Paxos determines one value that all correct nodes agree on
+  - Proposers need to initially check whether any other value has been decided on by acceptors
+- Proposal Number & Agreed Value:
+  - Messages sent by proposal includes:
+    - `PREPARE` - includes proposal number
+    - `ACCEPTREQ` - includes proposal number and value
+  - Defines an agreed value `V` via proposals
+  - Proposals may or may not be accepted by acceptors
+  - Proposers assign monotonically increasing numbers to each proposal
+    - **Numbers must be unique**
+    - Should be larger than any previous proposal number
+    - Use globally unique node/process identifier in lower order bits and an incrementing counter in high-order bits
+  - Value `V` represents the data that is to be agreed on
+- Acceptors:
+  - Messages sent by acceptor:
+    - `PROMISE`
+    - `ACCEPTED`
+  - Acceptors decide which proposal to accept and memorize its value (e.g. 3 out of 5 acceptors)
+  - Any proposal must be sent to a quorum of acceptors
+    - Usually sent to every acceptor
+  - A proposal must must be accepted by a quorum to pass
+- Quorum:
+  - Subset of acceptors such that two quorums share at least one member
+  - Quorum ensures there exists at least one acceptor who can decide between two proposals
+  - Typically any majority of participating acceptors
+- Learner:
+  - Messages sent by learner:
+    - `CLIENTRES` - includes value
+    - A learner acts as a storage point for decisions made by acceptors
+    - Paxos converts a decision made by only a quorum of acceptors into a consensus for leaners
+    - Because the decision has already been made by acceptors, it is easier for all learners to agree
+- Safety and liveness properties:
+  - Non-triviality: only proposed values can be learned
+  - Safety: at most one value can be learned
+  - Liveness: if value has been proposed, then eventually learner will learn some value
+-  Steps:
+   1. `CLIENTREQ(V)`
+   2. `PREPARE(PID)`
+   3. `PROMISE(PID, PID_OLD, V_OLD)`
+   4. `ACCEPTREQ(PID, V)`
+   5. `ACCEPTED(PID, V)`
+   6. `CLIENTRES(D)`
