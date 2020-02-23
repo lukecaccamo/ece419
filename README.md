@@ -474,3 +474,68 @@
    4. `ACCEPTREQ(PID, V)`
    5. `ACCEPTED(PID, V)`
    6. `CLIENTRES(D)`
+
+## Replication
+### Data Replication
+- Why?
+  - Performance:
+    - Data caching at browsers and proxy servers
+    - Content delivery networks
+  - High availability: upon crashes, data offered by replicas
+  - Network partitioning
+  - Fault tolerance
+- Costs:
+  - Additional bandwidth, # of messages exchanged, higher latency, complexity of code
+  - Keep replicas up to date when updating
+- How to update?
+  - Active replication: client send requests to every replica
+    - Limitation: replicas may diverge, requires total order broadcast (all requests in the same order)
+    - Quick if using first result recieved
+  - Passive replication:
+    - Primary-backup:
+      - Primary: receives invocations from clients, executes requests and sends back replies, replicates the state to other replicas
+      - Backup: interacts with primary only, used to replace primary when it crashes (leader election)
+      - Eager replication if replication is performed within request boundary
+      - Lazy replication if replication is performed after request boundary. Replicas may diverge, which requires additional mechanisms to deal with primary crashing. In all cases, a new primary is elected from among the backups
+      - Not scalable, since only one process handles client requests
+    - Multi-primary:
+      - Allows every replica to handle client requests.
+        - Replicas have to figure out how to order requests
+        - Eager replication has processes agree on order of operations before exectuion and response
+        - Lazy (optimistic) replication occurs when replica first executes locally and returns a response to client right away. Then replicas propagates in async the updates they made
+- Chain replication
+  - Updates (speculative history) at any node and the message gets replicated at every node. The response is sent back to the client at the tail. Then an acknowledgement message gets send back from tail to head to update the stable history.
+  - Need `f + 1` nodes to tolerate `f` failures
+  - Can handle head, middle, or tail failures and adding new nodes
+### Gossiping
+- Broadcast data in incremental manner:
+  - Longer propagation time
+  - Avoids overloading processes with heavy broadcast messages
+- Each node maintains a partial view of other nodes
+- During each gossip round, each node chooses random nodes from its view to exchange data with (e.g. current state, partial view)
+- Nodes update their state and partial view based on the data recieved
+- Gossiping happens periodically and non-deterministically
+- Used in Cassandra for propagating status of each node and metadata
+- Lazy Replication:
+  - Gossip about operations processed
+  - Reconcile logs and each apply any operations not yet seen
+  - Assumes updates can be applied in any order
+  - Each replica eventually converges to the same state
+### Hashing
+- Problem?
+  - Mapping objects to caches
+- Each cache should carry an equal share of objects
+- Clients need to know what cache to query for a given object
+- And prevent skewed distributions
+- Use hashing:
+  - Map opject ID to one of the caches through a hashing function
+  - Take the output of the hash function and use `mod p` where `p` is the number of hashes
+  - Uniform distribution of objects across nodes
+  - Easily find objects
+  - Let any client perform a local computation mapping a URL to node that contains referenced object
+  - Allows for nodes to be added/removed without much disruption
+- Consistent Hashing:
+  - Select a base hash function that maps input id to number range `h(x) = (ax + b) mod m`
+  - Interpret range of h as array that wraps around.
+  - Each object is mapped to a slot, each cache mapped to a slot.
+  - Assign each object to the closest cache slot in clockwise direction on the circle
