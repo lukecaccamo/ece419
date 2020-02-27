@@ -6,9 +6,14 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.Properties;
 
+import org.apache.zookeeper.*;
+
 import ecs.IECS;
 
 public class ECS implements IECS {
+
+    private Properties properties;
+    private ZooKeeper zooKeeper;
 
     public ECS(String configFilePath) {
         Properties prop = new Properties();

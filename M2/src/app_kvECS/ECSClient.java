@@ -7,7 +7,6 @@ import java.io.InputStreamReader;
 import java.net.*;
 import java.util.Collection;
 import java.util.Map;
-import java.util.Properties;
 
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
