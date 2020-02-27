@@ -17,8 +17,6 @@ import ecs.ECS;
 import ecs.IECSNode;
 
 public class ECSClient implements IECSClient {
-
-    private static Logger logger = Logger.getRootLogger();
     public static final String ANSI_BOLD = "\u001B[1m";
     public static final String ANSI_RESET = "\u001B[0m";
     public static final String ANSI_CYAN = "\u001B[36m";
@@ -27,6 +25,8 @@ public class ECSClient implements IECSClient {
     public static final String ANSI_WHITE = "\u001B[37m";
     private static final String PROMPT =
             ANSI_BOLD + ANSI_CYAN + "ECS " + ANSI_WHITE + "% " + ANSI_RESET;
+    private static Logger logger = Logger.getRootLogger();
+
     private BufferedReader stdin;
     private boolean stop = false;
     private ECS ecs;

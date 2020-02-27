@@ -5,15 +5,23 @@ import java.io.InputStream;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.CountDownLatch;
 
+import org.apache.log4j.Logger;
 import org.apache.zookeeper.*;
+import org.apache.zookeeper.Watcher.Event.KeeperState;
+import org.apache.zookeeper.data.Stat;
 
 import ecs.IECS;
 
 public class ECS implements IECS {
+    private static String DIR_PATH = System.getProperty("user.dir");
+    private static String ZOOKEEPER_PATH = "/zookeeper-3.4.11/bin/zkServer.sh";
+    private static Logger logger = Logger.getRootLogger();
 
     private Properties properties;
-    private ZooKeeper zooKeeper;
+    private ZooKeeper zookeeper;
+    private CountDownLatch connected;
 
     public ECS(String configFilePath) {
         this.properties = new Properties();
@@ -26,6 +34,19 @@ public class ECS implements IECS {
                 String hostName = value[0];
                 int port = Integer.parseInt(value[1]);
             }
+
+            ProcessBuilder zookeeperProcess = new ProcessBuilder(DIR_PATH + ZOOKEEPER_PATH, "start");
+            zookeeperProcess.start();
+            connected = new CountDownLatch(1);
+            this.zookeeper = new ZooKeeper("localhost", 3000000, new Watcher() {
+                @Override
+                public void process(WatchedEvent e) {
+                    if (e.getState() == KeeperState.SyncConnected) {
+                        connected.countDown();
+                    }
+                }
+            });
+            connected.await();
         } catch (Exception e) {
             e.printStackTrace();
         }
