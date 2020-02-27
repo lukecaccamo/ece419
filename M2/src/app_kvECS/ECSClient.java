@@ -119,8 +119,7 @@ public class ECSClient implements IECSClient {
      */
     @Override
     public boolean start() {
-        // TODO
-        return false;
+        return this.ecs.start();
     }
 
     /**
@@ -132,8 +131,7 @@ public class ECSClient implements IECSClient {
      */
     @Override
     public boolean stop() {
-        // TODO
-        return false;
+        return this.ecs.stop();
     }
 
     /**
@@ -144,8 +142,7 @@ public class ECSClient implements IECSClient {
      */
     @Override
     public boolean shutdown() {
-        // TODO
-        return false;
+        return this.ecs.shutdown();
     }
 
     /**
@@ -156,8 +153,7 @@ public class ECSClient implements IECSClient {
      */
     @Override
     public IECSNode addNode(String cacheStrategy, int cacheSize) {
-        // TODO
-        return null;
+        return this.ecs.addNode(cacheStrategy, cacheSize);
     }
 
     /**
@@ -172,8 +168,7 @@ public class ECSClient implements IECSClient {
      */
     @Override
     public Collection<IECSNode> addNodes(int count, String cacheStrategy, int cacheSize) {
-        // TODO
-        return null;
+        return this.ecs.addNodes(count, cacheStrategy, cacheSize);
     }
 
     /**
@@ -183,8 +178,7 @@ public class ECSClient implements IECSClient {
      */
     @Override
     public Collection<IECSNode> setupNodes(int count, String cacheStrategy, int cacheSize) {
-        // TODO
-        return null;
+        return this.ecs.setupNodes(count, cacheStrategy, cacheSize);
     }
 
     /**
@@ -196,8 +190,7 @@ public class ECSClient implements IECSClient {
      */
     @Override
     public boolean awaitNodes(int count, int timeout) throws Exception {
-        // TODO
-        return false;
+        return this.ecs.awaitNodes(count, timeout);
     }
 
     /**
@@ -208,8 +201,7 @@ public class ECSClient implements IECSClient {
      */
     @Override
     public boolean removeNodes(Collection<String> nodeNames) {
-        // TODO
-        return false;
+        return this.ecs.removeNodes(nodeNames);
     }
 
     /**
@@ -217,8 +209,7 @@ public class ECSClient implements IECSClient {
      */
     @Override
     public Map<String, IECSNode> getNodes() {
-        // TODO
-        return null;
+        return this.ecs.getNodes();
     }
 
     /**
@@ -226,12 +217,12 @@ public class ECSClient implements IECSClient {
      */
     @Override
     public IECSNode getNodeByKey(String Key) {
-        // TODO
-        return null;
+        return this.ecs.getNodeByKey(Key);
     }
 
     private void printHelp() {
         StringBuilder sb = new StringBuilder();
+        sb.append(PROMPT + "\n");
         sb.append(PROMPT).append(ANSI_BOLD + ANSI_BLUE + "ECS CLIENT HELP (Usage):\n" + ANSI_RESET);
         sb.append(PROMPT).append(ANSI_BOLD + "start" + ANSI_RESET);
         sb.append(
