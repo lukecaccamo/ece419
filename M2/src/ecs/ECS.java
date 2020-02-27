@@ -16,13 +16,13 @@ public class ECS implements IECS {
     private ZooKeeper zooKeeper;
 
     public ECS(String configFilePath) {
-        Properties prop = new Properties();
+        this.properties = new Properties();
         try {
             InputStream configFile = new FileInputStream(configFilePath);
-            prop.load(configFile);
+            this.properties.load(configFile);
             configFile.close();
-            for (String key : prop.stringPropertyNames()) {
-                String[] value = prop.getProperty(key).split("\\s+");
+            for (String key : this.properties.stringPropertyNames()) {
+                String[] value = this.properties.getProperty(key).split("\\s+");
                 String hostName = value[0];
                 int port = Integer.parseInt(value[1]);
                 System.out.println(key + " => " + hostName + ":" + port);
