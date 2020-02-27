@@ -25,7 +25,6 @@ public class ECS implements IECS {
                 String[] value = this.properties.getProperty(key).split("\\s+");
                 String hostName = value[0];
                 int port = Integer.parseInt(value[1]);
-                System.out.println(key + " => " + hostName + ":" + port);
             }
         } catch (Exception e) {
             e.printStackTrace();
