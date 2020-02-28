@@ -15,7 +15,8 @@ import org.apache.zookeeper.data.Stat;
 import ecs.IECS;
 
 public class ECS implements IECS {
-    private static String ZOOKEEPER_PATH = System.getProperty("user.dir") + "/zookeeper-3.4.11";
+    private static String M2_PATH = System.getProperty("user.dir");
+    private static String ZOOKEEPER_PATH = M2_PATH + "/zookeeper-3.4.11";
     private static String ZOOKEEPER_SCRIPT_PATH = ZOOKEEPER_PATH + "/bin/zkServer.sh";
     private static String ZOOKEEPER_CONF_PATH = ZOOKEEPER_PATH + "/conf/zoo_sample.cfg";
     private static Logger logger = Logger.getRootLogger();
@@ -35,20 +36,27 @@ public class ECS implements IECS {
                 String hostName = value[0];
                 int port = Integer.parseInt(value[1]);
             }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
 
-            ProcessBuilder zookeeperProcessBuilder = new ProcessBuilder(ZOOKEEPER_SCRIPT_PATH, "start", ZOOKEEPER_CONF_PATH);
-            Process zooKeeperProcess = zookeeperProcessBuilder.start();
+        try {
+            ProcessBuilder zookeeperProcessBuilder =
+                    new ProcessBuilder(ZOOKEEPER_SCRIPT_PATH, "start", ZOOKEEPER_CONF_PATH)
+                            .inheritIO();
+            Process zooKeeperProcess = zookeeperProcessBuilder.inheritIO().start();
             zooKeeperProcess.waitFor();
 
             connected = new CountDownLatch(1);
-            this.zookeeper = new ZooKeeper("localhost", 3000000, new Watcher() {
+            Watcher watcher = new Watcher() {
                 @Override
                 public void process(WatchedEvent e) {
                     if (e.getState() == KeeperState.SyncConnected) {
                         connected.countDown();
                     }
                 }
-            });
+            };
+            this.zookeeper = new ZooKeeper("localhost", 3000, watcher);
             connected.await();
         } catch (Exception e) {
             e.printStackTrace();
@@ -57,7 +65,7 @@ public class ECS implements IECS {
 
     /**
      * Starts the storage service by calling start() on all KVServer instances that participate in
-     * the service.\
+     * the service.
      * 
      * @throws Exception some meaningfull exception on failure
      * @return true on success, false on failure

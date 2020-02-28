@@ -25,13 +25,15 @@ public class ECSClient implements IECSClient {
     public static final String ANSI_WHITE = "\u001B[37m";
     private static final String PROMPT =
             ANSI_BOLD + ANSI_CYAN + "ECS " + ANSI_WHITE + "% " + ANSI_RESET;
-    private static Logger logger = Logger.getRootLogger();
+    private static Logger logger;
 
     private BufferedReader stdin;
     private boolean stop = false;
     private ECS ecs;
 
     public ECSClient(String configFilePath) {
+        this.logger = Logger.getRootLogger();
+        this.logger.setLevel(Level.ERROR);
         this.ecs = new ECS(configFilePath);
     }
 
