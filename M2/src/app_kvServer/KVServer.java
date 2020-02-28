@@ -11,6 +11,8 @@ import shared.communications.KVCommModule;
 import shared.exceptions.DeleteException;
 import shared.exceptions.GetException;
 import shared.exceptions.PutException;
+import shared.metadata.MetaData;
+import shared.metadata.ServerStateType;
 
 import java.io.IOException;
 import java.net.*;
@@ -24,8 +26,10 @@ public class KVServer implements IKVServer, Runnable {
 	private int cacheSize;
 	private ServerSocket serverSocket;
 	private boolean running;
+	private ServerStateType serverStateType;
 	private IKVCache cache;
 	private KVDatabase db;
+	private MetaData metaData;
 	private static final String DELETE_VAL = "null";
 	/**
 	 * Start KV Server at given port
@@ -42,6 +46,7 @@ public class KVServer implements IKVServer, Runnable {
 		this.port = port;
 		this.cacheSize = cacheSize;
 		this.strategy = strategy;
+		this.serverStateType = ServerStateType.STOPPED;
 
 		switch(CacheStrategy.valueOf(strategy)){
 			case LRU:
@@ -62,7 +67,50 @@ public class KVServer implements IKVServer, Runnable {
 		//db = new KVDatabase();
 
 	}
-	
+
+	// M2
+
+	public ServerStateType getServerState() {
+		return this.serverStateType;
+	}
+
+	public void start() {
+		this.serverStateType = ServerStateType.STARTED;
+	}
+
+	public void stop() {
+		this.serverStateType = ServerStateType.STOPPED;
+	}
+
+	public void shutDown() {
+		// TODO: send shutdown message
+		this.serverStateType = ServerStateType.SHUT_DOWN;
+
+		close();
+	}
+
+	public MetaData getMetaData() {
+		return this.metaData;
+	}
+
+	public void updateMetaData(MetaData metaData) {
+		this.metaData = metaData;
+	}
+
+	public void lockWrite() {
+
+	}
+
+	public void unlockWrite() {
+
+	}
+
+	public void isWriterLocked() {
+
+	}
+
+	// M1
+
 	@Override
 	public int getPort(){
 		int port = 0;
@@ -97,13 +145,11 @@ public class KVServer implements IKVServer, Runnable {
 
 	@Override
     public boolean inStorage(String key){
-		// TODO Auto-generated method stub
 		return db.inStorage(key);
 	}
 
 	@Override
     public boolean inCache(String key){
-		// TODO Auto-generated method stub
 		if (getCacheStrategy() == CacheStrategy.None){
 			return false;
 		}

@@ -2,11 +2,13 @@
 
 # Compiled class file
 *.class
+*.jar
 
 # Log file
 *.log
 *.txt
 *.out
+*.MF
 
 # Database file
 *.db
@@ -24,6 +26,9 @@
 *.zip
 *.tar.gz
 *.rar
+
+# Zookeeper
+zookeeper-3.4.11/
 
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
