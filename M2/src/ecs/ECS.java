@@ -15,8 +15,9 @@ import org.apache.zookeeper.data.Stat;
 import ecs.IECS;
 
 public class ECS implements IECS {
-    private static String DIR_PATH = System.getProperty("user.dir");
-    private static String ZOOKEEPER_PATH = "/zookeeper-3.4.11/bin/zkServer.sh";
+    private static String ZOOKEEPER_PATH = System.getProperty("user.dir") + "/zookeeper-3.4.11";
+    private static String ZOOKEEPER_SCRIPT_PATH = ZOOKEEPER_PATH + "/bin/zkServer.sh";
+    private static String ZOOKEEPER_CONF_PATH = ZOOKEEPER_PATH + "/conf/zoo_sample.cfg";
     private static Logger logger = Logger.getRootLogger();
 
     private Properties properties;
@@ -35,8 +36,10 @@ public class ECS implements IECS {
                 int port = Integer.parseInt(value[1]);
             }
 
-            ProcessBuilder zookeeperProcess = new ProcessBuilder(DIR_PATH + ZOOKEEPER_PATH, "start", DIR_PATH + "/zookeeper-3.4.11/conf/zoo_sample.cfg");
-            zookeeperProcess.start();
+            ProcessBuilder zookeeperProcessBuilder = new ProcessBuilder(ZOOKEEPER_SCRIPT_PATH, "start", ZOOKEEPER_CONF_PATH);
+            Process zooKeeperProcess = zookeeperProcessBuilder.start();
+            zooKeeperProcess.waitFor();
+
             connected = new CountDownLatch(1);
             this.zookeeper = new ZooKeeper("localhost", 3000000, new Watcher() {
                 @Override
