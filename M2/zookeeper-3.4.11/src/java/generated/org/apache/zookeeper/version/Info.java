@@ -26,6 +26,6 @@ public interface Info {
     int MICRO=11;
     String QUALIFIER=null;
     int REVISION=-1; //TODO: remove as related to SVN VCS
-    String REVISION_HASH="c0c59f43579b5658fede62cb9e317a82d881e1d5";
-    String BUILD_DATE="02/27/2020 22:59 GMT";
+    String REVISION_HASH="6e0f8779735ce8347237f5fc9bed38bb44d30350";
+    String BUILD_DATE="02/28/2020 00:44 GMT";
 }

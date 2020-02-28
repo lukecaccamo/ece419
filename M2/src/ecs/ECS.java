@@ -35,7 +35,7 @@ public class ECS implements IECS {
                 int port = Integer.parseInt(value[1]);
             }
 
-            ProcessBuilder zookeeperProcess = new ProcessBuilder(DIR_PATH + ZOOKEEPER_PATH, "start");
+            ProcessBuilder zookeeperProcess = new ProcessBuilder(DIR_PATH + ZOOKEEPER_PATH, "start", DIR_PATH + "/zookeeper-3.4.11/conf/zoo_sample.cfg");
             zookeeperProcess.start();
             connected = new CountDownLatch(1);
             this.zookeeper = new ZooKeeper("localhost", 3000000, new Watcher() {
