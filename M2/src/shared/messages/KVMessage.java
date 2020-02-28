@@ -13,8 +13,13 @@ public interface KVMessage {
 		DELETE_SUCCESS, /* Delete - request successful */
 		DELETE_ERROR, 	/* Delete - request successful */
 		NONE,
-		FAILED
+		FAILED,
+		SERVER_STOPPED,
+		SERVER_WRITE_LOCK,
+		SERVER_NOT_RESPONSIBLE
 	}
+
+	public static final String SIMPLE_ID = "<SIMPLE>";
 
 	/**
 	 * @return the key that is associated with this message, 

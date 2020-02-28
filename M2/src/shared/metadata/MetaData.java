@@ -18,7 +18,11 @@ public class MetaData {
         this.name = name;
         this.host = host;
         this.port = port;
-        this.hashRange = new String[] {startHash, endHash};
+        this.hashRange = new String[]{startHash, endHash};
+    }
+
+    public MetaData(String msg) {
+        deserialize(msg);
     }
 
     public String getName() {
@@ -54,7 +58,7 @@ public class MetaData {
         String[] tokens = msg.split(delimit);
         name = tokens[0];
         host = tokens[1];
-        port = Integer.parseInt(tokens[1]);
+        port = Integer.parseInt(tokens[2]);
         hashRange[0] = tokens[3];
         hashRange[1] = tokens[4];
     }

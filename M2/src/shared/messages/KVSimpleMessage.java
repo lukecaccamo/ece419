@@ -28,7 +28,8 @@ public class KVSimpleMessage implements Serializable, KVMessage {
 		if(this.value != null) this.msg += " " + this.value;
 		this.msg.trim();
 
-		this.msgBytes = toByteArray(this.msg);
+		//add MSG ID to bytes for sending
+		this.msgBytes = toByteArray(SIMPLE_ID + this.msg);
 	}
 
 	/**
@@ -77,7 +78,7 @@ public class KVSimpleMessage implements Serializable, KVMessage {
 		return status;
 	}
 
-	private byte[] toByteArray(String s){
+	public byte[] toByteArray(String s){
 		byte[] bytes = s.getBytes();
 		byte[] ctrBytes = new byte[]{LINE_FEED, RETURN};
 		byte[] tmp = new byte[bytes.length + ctrBytes.length];

@@ -1,21 +1,24 @@
 package shared.communications;
 
+import app_kvServer.KVServer;
+import org.apache.log4j.Logger;
+import shared.exceptions.DeleteException;
+import shared.exceptions.GetException;
+import shared.exceptions.PutException;
+import shared.messages.IKVAdminMessage;
+import shared.messages.KVAdminMessage;
+import shared.messages.KVMessage;
+import shared.messages.KVMessage.StatusType;
+import shared.messages.KVSimpleMessage;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
-import java.util.HashSet;
-import java.util.Set;
 
-import app_kvServer.KVServer;
-import org.apache.log4j.Logger;
-
-import shared.exceptions.DeleteException;
-import shared.exceptions.GetException;
-import shared.exceptions.PutException;
-import shared.messages.KVMessage;
-import shared.messages.KVMessage.StatusType;
-import shared.messages.KVSimpleMessage;
+import static shared.messages.IKVAdminMessage.ADMIN_DELIMIT;
+import static shared.messages.IKVAdminMessage.ADMIN_ID;
+import static shared.messages.KVMessage.SIMPLE_ID;
 
 public class KVCommModule implements Runnable {
 
@@ -56,43 +59,18 @@ public class KVCommModule implements Runnable {
 			while(running) {
 				try {
 
-					KVMessage msg = receiveKVMessage();
-					StatusType status = msg.getStatus();
-					String key = msg.getKey();
-					String value = msg.getValue();
+					String msg = getMessage();
 
-					switch (status) {
+					if (msg.contains(SIMPLE_ID)) {
+						msg = msg.replaceFirst(SIMPLE_ID, "");
+						KVMessage kvMsg = processKVSimpleMessage(msg);
+						sendKVSimpleMsgResponse(kvMsg.getStatus(), kvMsg.getKey(), kvMsg.getValue());
+					}
 
-						case GET:
-							value = server.getKV(key);
-
-							if (value == null) {
-								sendKVMessage(StatusType.GET_ERROR, key, null);
-							} else {
-								sendKVMessage(StatusType.GET_SUCCESS, key, value);
-							}
-
-							break;
-
-						case PUT:
-
-							status = StatusType.PUT_SUCCESS;
-
-							if(value.equals(DELETE_VALUE))
-								status = StatusType.DELETE_SUCCESS;
-							else if(server.inCache(key) || server.inStorage(key)) {
-								//System.out.println(server.inCache(key));
-								//System.out.println(server.inStorage(key));
-								status = StatusType.PUT_UPDATE;
-							}
-
-							server.putKV(key, value);
-
-
-
-							sendKVMessage(status, key, value);
-
-							break;
+					if (msg.contains(ADMIN_ID)) {
+						msg = msg.replaceFirst(ADMIN_ID, "");
+						KVAdminMessage adminMsg = processKVAdminMessage(msg);
+						sendKVAdminMsgResponse(adminMsg);
 					}
 
 					/* connection either terminated by the client or lost due to
@@ -186,16 +164,22 @@ public class KVCommModule implements Runnable {
 		logger.info("Send message:\t '" + msg.getMsg() + "'");
     }
 
+
 	public KVSimpleMessage receiveKVMessage() throws IOException {
-		
+		String msg = getMessage();
+		msg = msg.replaceFirst(SIMPLE_ID, "");
+		return processKVSimpleMessage(msg);
+    }
+
+	private String getMessage() throws IOException {
 		int index = 0;
 		byte[] msgBytes = null, tmp = null;
 		byte[] bufferBytes = new byte[BUFFER_SIZE];
-		
+
 		/* read first char from stream */
-		byte read = (byte) this.input.read();	
+		byte read = (byte) this.input.read();
 		boolean reading = true;
-		
+
 		while(read != 13 && reading) {/* carriage return */
 			/* if buffer filled, copy to msg array */
 			if(index == BUFFER_SIZE) {
@@ -212,23 +196,23 @@ public class KVCommModule implements Runnable {
 				msgBytes = tmp;
 				bufferBytes = new byte[BUFFER_SIZE];
 				index = 0;
-			} 
-			
+			}
+
 			/* only read valid characters, i.e. letters and numbers */
 			if((read > 31 && read < 127)) {
 				bufferBytes[index] = read;
 				index++;
 			}
-			
+
 			/* stop reading is DROP_SIZE is reached */
 			if(msgBytes != null && msgBytes.length + index >= DROP_SIZE) {
 				reading = false;
 			}
-			
+
 			/* read next char from stream */
 			read = (byte) this.input.read();
 		}
-		
+
 		if(msgBytes == null){
 			tmp = new byte[index];
 			System.arraycopy(bufferBytes, 0, tmp, 0, index);
@@ -237,12 +221,112 @@ public class KVCommModule implements Runnable {
 			System.arraycopy(msgBytes, 0, tmp, 0, msgBytes.length);
 			System.arraycopy(bufferBytes, 0, tmp, msgBytes.length, index);
 		}
-		
+
 		msgBytes = tmp;
-		
+
 		/* build final String */
 		String msg = new String(msgBytes);
 
+		return msg;
+	}
+
+	private void sendKVSimpleMsgResponse(StatusType status, String key, String value) throws Exception {
+		switch (status) {
+
+			case GET:
+				value = server.getKV(key);
+
+				if (value == null) {
+					sendKVMessage(StatusType.GET_ERROR, key, null);
+				} else {
+					sendKVMessage(StatusType.GET_SUCCESS, key, value);
+				}
+
+				break;
+
+			case PUT:
+
+				status = StatusType.PUT_SUCCESS;
+
+				if(value.equals(DELETE_VALUE))
+					status = StatusType.DELETE_SUCCESS;
+				else if(server.inCache(key) || server.inStorage(key)) {
+					//System.out.println(server.inCache(key));
+					//System.out.println(server.inStorage(key));
+					status = StatusType.PUT_UPDATE;
+				}
+
+				server.putKV(key, value);
+
+				sendKVMessage(status, key, value);
+
+				break;
+		}
+	}
+
+	private void sendKVAdminMsgResponse(KVAdminMessage msg) {
+		//TODO: send response to ecs when complete
+		switch (msg.getAction()) {
+			case INIT:
+				server.initKVServer(msg.getMetaData(), msg.getCacheSize(), msg.getReplacementStrategy());
+				break;
+			case START:
+				server.start();
+				break;
+			case STOP:
+				server.stop();
+				break;
+			case SHUTDOWN:
+				server.shutDown();
+				break;
+			case LOCK_WRITE:
+				server.lockWrite();
+				break;
+			case UNLOCK_WRITE:
+				server.unlockWrite();
+				break;
+			case IS_WRITER_LOCKED:
+				server.isWriterLocked();
+				break;
+			case MOVE_DATA:
+				server.moveData(msg.getRange(), msg.getServer());
+				break;
+			case UPDATE:
+				server.updateMetaData(msg.getMetaData());
+				break;
+			case GET_METADATA:
+				server.getMetaData();
+				break;
+			case GET_SERVER_STATE:
+				server.getServerState();
+				break;
+		}
+
+		return;
+	}
+
+	private KVAdminMessage processKVAdminMessage(String msg) {
+		String[] tokens = msg.split(ADMIN_DELIMIT);
+
+		IKVAdminMessage.ActionType action = IKVAdminMessage.ActionType.valueOf(tokens[0]);
+		KVAdminMessage adminMsg = null;
+		switch (action) {
+			case INIT:
+			case MOVE_DATA:
+				adminMsg = new KVAdminMessage(action, tokens[1], tokens[2], tokens[3]);
+				break;
+			case UPDATE:
+				adminMsg = new KVAdminMessage(action, tokens[1]);
+				break;
+			default:
+				adminMsg = new KVAdminMessage(action);
+				break;
+		}
+
+		return adminMsg;
+	}
+
+	private KVSimpleMessage processKVSimpleMessage(String msg) {
 		String[] tokens = msg.split("\\s+");
 
 		StringBuilder value = new StringBuilder();
@@ -273,6 +357,5 @@ public class KVCommModule implements Runnable {
 
 		logger.info("Receive message:\t '" + ret.getMsg() + "'");
 		return ret;
-    }
-
+	}
 }

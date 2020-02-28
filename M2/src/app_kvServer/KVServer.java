@@ -48,19 +48,7 @@ public class KVServer implements IKVServer, Runnable {
 		this.strategy = strategy;
 		this.serverStateType = ServerStateType.STOPPED;
 
-		switch(CacheStrategy.valueOf(strategy)){
-			case LRU:
-				cache = new LRUCache(this.cacheSize);
-			case FIFO:
-				cache = new FIFOCache(this.cacheSize);
-			case LFU:
-				cache = new LFUCache(this.cacheSize);
-			case None:
-				break;
-			default:
-				//logger error
-				break;
-		}
+		assignCache(strategy);
 
 		db = new KVDatabase();
 		new Thread(this).start();
@@ -69,6 +57,13 @@ public class KVServer implements IKVServer, Runnable {
 	}
 
 	// M2
+
+	public void initKVServer(MetaData metaData, int cacheSize, String replacementStrategy) {
+		this.metaData = metaData;
+		this.cacheSize = cacheSize;
+		this.serverStateType = ServerStateType.STOPPED;
+		assignCache(replacementStrategy);
+	}
 
 	public ServerStateType getServerState() {
 		return this.serverStateType;
@@ -95,6 +90,10 @@ public class KVServer implements IKVServer, Runnable {
 
 	public void updateMetaData(MetaData metaData) {
 		this.metaData = metaData;
+	}
+
+	public void moveData (String[] range, String server) {
+
 	}
 
 	public void lockWrite() {
@@ -317,4 +316,21 @@ public class KVServer implements IKVServer, Runnable {
 		}
 	}
 
+	private void assignCache(String strategy) {
+		switch(CacheStrategy.valueOf(strategy)){
+			case LRU:
+				cache = new LRUCache(this.cacheSize);
+			case FIFO:
+				cache = new FIFOCache(this.cacheSize);
+			case LFU:
+				cache = new LFUCache(this.cacheSize);
+			case None:
+				break;
+			default:
+				//logger error
+				break;
+		}
+	}
+
 }
+
