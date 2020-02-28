@@ -16,6 +16,7 @@ import org.apache.zookeeper.Watcher.Event.KeeperState;
 import org.apache.zookeeper.data.Stat;
 
 import ecs.IECS;
+import shared.metadata.Hash;
 import shared.metadata.ServerStateType;
 
 public class ECS implements IECS {
@@ -68,7 +69,7 @@ public class ECS implements IECS {
                 String host = value[0];
                 String port = value[1];
 
-                String md5Hash = MD5(host + ":" + port);
+                String md5Hash = Hash.MD5(host + ":" + port);
                 this.serverStates.put(md5Hash, ServerStateType.IDLE);
                 this.hashRing.put(md5Hash,
                         new ECSNode(key, host, Integer.parseInt(port), null, null));
@@ -195,20 +196,6 @@ public class ECS implements IECS {
     @Override
     public IECSNode getNodeByKey(String Key) {
         // TODO
-        return null;
-    }
-
-    public String MD5(String md5) {
-        try {
-            java.security.MessageDigest md = java.security.MessageDigest.getInstance("MD5");
-            byte[] array = md.digest(md5.getBytes());
-            StringBuffer sb = new StringBuffer();
-            for (int i = 0; i < array.length; ++i) {
-                sb.append(Integer.toHexString((array[i] & 0xFF) | 0x100).substring(1, 3));
-            }
-            return sb.toString();
-        } catch (java.security.NoSuchAlgorithmException e) {
-        }
         return null;
     }
 }
