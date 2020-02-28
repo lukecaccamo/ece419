@@ -79,7 +79,14 @@ public class ECSClient implements IECSClient {
                 }
                 break;
             case "add":
-                if (tokens.length == 3) {
+                if (tokens.length == 4) {
+                    int count = Integer.parseInt(tokens[1]);
+                    String cacheStrategy = tokens[2];
+                    int cacheSize = Integer.parseInt(tokens[3]);
+                    Collection<IECSNode> nodes = this.addNodes(count, cacheStrategy, cacheSize);
+                    for (Map.Entry<String, IECSNode> e : this.getNodes().entrySet()) {
+                        printInfo("Added " + e.getValue().getNodeName() + " (" + e.getValue().getNodeHashRange()[0] + ", " + e.getValue().getNodeHashRange()[1] + ")");
+                    }
                 } else {
                     printError("Invalid number of parameters!");
                 }

@@ -4,6 +4,7 @@ import app_kvServer.KVCache.FIFOCache;
 import app_kvServer.KVCache.IKVCache;
 import app_kvServer.KVCache.LFUCache;
 import app_kvServer.KVCache.LRUCache;
+import app_kvServer.IKVServer.ServerStateType;
 import logger.LogSetup;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
@@ -12,7 +13,6 @@ import shared.exceptions.DeleteException;
 import shared.exceptions.GetException;
 import shared.exceptions.PutException;
 import shared.metadata.MetaData;
-import shared.metadata.ServerStateType;
 
 import java.io.IOException;
 import java.net.*;

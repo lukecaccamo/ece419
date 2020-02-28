@@ -3,6 +3,7 @@ package ecs;
 import java.io.FileInputStream;
 import java.io.InputStream;
 import java.security.MessageDigest;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.TreeMap;
@@ -14,10 +15,11 @@ import org.apache.log4j.Logger;
 import org.apache.zookeeper.*;
 import org.apache.zookeeper.Watcher.Event.KeeperState;
 import org.apache.zookeeper.data.Stat;
-
+import app_kvServer.IKVServer;
+import app_kvServer.IKVServer.ServerStateType;
 import ecs.IECS;
-import shared.metadata.Hash;
-import shared.metadata.ServerStateType;
+import ecs.IECSNode.IECSNodeFlag;
+import shared.metadata.MetaData;
 
 public class ECS implements IECS {
     private static String M2_PATH = System.getProperty("user.dir");
@@ -27,7 +29,7 @@ public class ECS implements IECS {
     private static Logger logger = Logger.getRootLogger();
 
     private Properties properties;
-    private HashMap<String, ServerStateType> serverStates;
+    private HashMap<String, IECSNode> servers;
     private TreeMap<String, IECSNode> hashRing;
 
     private ZooKeeper zookeeper;
@@ -57,7 +59,7 @@ public class ECS implements IECS {
         }
 
         this.properties = new Properties();
-        this.serverStates = new HashMap<>();
+        this.servers = new HashMap<>();
         this.hashRing = new TreeMap<>();
 
         try {
@@ -69,10 +71,10 @@ public class ECS implements IECS {
                 String host = value[0];
                 String port = value[1];
 
-                String md5Hash = Hash.MD5(host + ":" + port);
-                this.serverStates.put(md5Hash, ServerStateType.IDLE);
-                this.hashRing.put(md5Hash,
-                        new ECSNode(key, host, Integer.parseInt(port), null, null));
+                IECSNode node = new ECSNode(key, host, Integer.parseInt(port));
+                this.servers.put(node.getHashKey(), node);
+
+                System.out.println(node.getHashKey());
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -88,8 +90,12 @@ public class ECS implements IECS {
      */
     @Override
     public boolean start() {
-        // TODO
-        return false;
+        IECSNodeFlag nodeFlag = IECSNodeFlag.START;
+        for (Map.Entry<String, IECSNode> e : this.hashRing.entrySet()) {
+            IECSNode node = e.getValue();
+            node.setFlag(nodeFlag);
+        }
+        return true;
     }
 
     /**
@@ -101,8 +107,12 @@ public class ECS implements IECS {
      */
     @Override
     public boolean stop() {
-        // TODO
-        return false;
+        IECSNodeFlag nodeFlag = IECSNodeFlag.STOP;
+        for (Map.Entry<String, IECSNode> e : this.hashRing.entrySet()) {
+            IECSNode node = e.getValue();
+            node.setFlag(nodeFlag);
+        }
+        return true;
     }
 
     /**
@@ -113,8 +123,12 @@ public class ECS implements IECS {
      */
     @Override
     public boolean shutdown() {
-        // TODO
-        return false;
+        IECSNodeFlag nodeFlag = IECSNodeFlag.SHUT_DOWN;
+        for (Map.Entry<String, IECSNode> e : this.hashRing.entrySet()) {
+            IECSNode node = e.getValue();
+            node.setFlag(nodeFlag);
+        }
+        return true;
     }
 
     /**
@@ -125,8 +139,32 @@ public class ECS implements IECS {
      */
     @Override
     public IECSNode addNode(String cacheStrategy, int cacheSize) {
-        // TODO
-        return null;
+        IECSNode node = null;
+        try {
+            for (Map.Entry<String, IECSNode> e : servers.entrySet()) {
+                node = e.getValue();
+                if (node.getFlag() == IECSNodeFlag.SHUT_DOWN) {
+                    node.setFlag(IECSNodeFlag.STOP);
+                    break;
+                }
+            }
+            hashRing.put(node.getHashKey(), node);
+
+            String prevHash = null;
+            for (Map.Entry<String, IECSNode> e : hashRing.entrySet()) {
+                if (prevHash != null) {
+                    IECSNode n = e.getValue();
+                    n.setNodeHashRange(prevHash, e.getKey());
+                }
+                prevHash = e.getKey();
+            }
+            String firstHash = hashRing.firstKey();
+            IECSNode n = hashRing.get(firstHash);
+            n.setNodeHashRange(prevHash, firstHash);
+        } catch (Exception e) {
+            logger.error(e);
+        }
+        return node;
     }
 
     /**
@@ -141,8 +179,11 @@ public class ECS implements IECS {
      */
     @Override
     public Collection<IECSNode> addNodes(int count, String cacheStrategy, int cacheSize) {
-        // TODO
-        return null;
+        Collection<IECSNode> nodes = new ArrayList<>();
+        for (int i = 0; i < count; i++) {
+            nodes.add(this.addNode(cacheStrategy, cacheSize));
+        }
+        return nodes;
     }
 
     /**
@@ -186,8 +227,7 @@ public class ECS implements IECS {
      */
     @Override
     public Map<String, IECSNode> getNodes() {
-        // TODO
-        return null;
+        return this.hashRing;
     }
 
     /**

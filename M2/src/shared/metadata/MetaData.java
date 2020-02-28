@@ -1,5 +1,7 @@
 package shared.metadata;
 
+import app_kvServer.IKVServer.ServerStateType;
+
 public class MetaData {
 
     private static String delimit = ";";
