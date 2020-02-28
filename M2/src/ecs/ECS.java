@@ -2,7 +2,10 @@ package ecs;
 
 import java.io.FileInputStream;
 import java.io.InputStream;
+import java.security.MessageDigest;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.TreeMap;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
@@ -13,6 +16,7 @@ import org.apache.zookeeper.Watcher.Event.KeeperState;
 import org.apache.zookeeper.data.Stat;
 
 import ecs.IECS;
+import shared.metadata.ServerStateType;
 
 public class ECS implements IECS {
     private static String M2_PATH = System.getProperty("user.dir");
@@ -22,24 +26,13 @@ public class ECS implements IECS {
     private static Logger logger = Logger.getRootLogger();
 
     private Properties properties;
+    private HashMap<String, ServerStateType> serverStates;
+    private TreeMap<String, IECSNode> hashRing;
+
     private ZooKeeper zookeeper;
     private CountDownLatch connected;
 
     public ECS(String configFilePath) {
-        this.properties = new Properties();
-        try {
-            InputStream configFile = new FileInputStream(configFilePath);
-            this.properties.load(configFile);
-            configFile.close();
-            for (String key : this.properties.stringPropertyNames()) {
-                String[] value = this.properties.getProperty(key).split("\\s+");
-                String hostName = value[0];
-                int port = Integer.parseInt(value[1]);
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
         try {
             ProcessBuilder zookeeperProcessBuilder =
                     new ProcessBuilder(ZOOKEEPER_SCRIPT_PATH, "start", ZOOKEEPER_CONF_PATH)
@@ -58,6 +51,28 @@ public class ECS implements IECS {
             };
             this.zookeeper = new ZooKeeper("localhost", 3000, watcher);
             connected.await();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        this.properties = new Properties();
+        this.serverStates = new HashMap<>();
+        this.hashRing = new TreeMap<>();
+
+        try {
+            InputStream configFile = new FileInputStream(configFilePath);
+            this.properties.load(configFile);
+            configFile.close();
+            for (String key : this.properties.stringPropertyNames()) {
+                String[] value = this.properties.getProperty(key).split("\\s+");
+                String host = value[0];
+                String port = value[1];
+
+                String md5Hash = MD5(host + ":" + port);
+                this.serverStates.put(md5Hash, ServerStateType.IDLE);
+                this.hashRing.put(md5Hash,
+                        new ECSNode(key, host, Integer.parseInt(port), null, null));
+            }
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -180,6 +195,20 @@ public class ECS implements IECS {
     @Override
     public IECSNode getNodeByKey(String Key) {
         // TODO
+        return null;
+    }
+
+    public String MD5(String md5) {
+        try {
+            java.security.MessageDigest md = java.security.MessageDigest.getInstance("MD5");
+            byte[] array = md.digest(md5.getBytes());
+            StringBuffer sb = new StringBuffer();
+            for (int i = 0; i < array.length; ++i) {
+                sb.append(Integer.toHexString((array[i] & 0xFF) | 0x100).substring(1, 3));
+            }
+            return sb.toString();
+        } catch (java.security.NoSuchAlgorithmException e) {
+        }
         return null;
     }
 }
