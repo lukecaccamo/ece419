@@ -4,10 +4,15 @@ import org.junit.Test;
 
 import client.KVStore;
 import junit.framework.TestCase;
+import shared.messages.IKVAdminMessage;
+import shared.messages.KVAdminMessage;
 import shared.messages.KVMessage;
 import shared.messages.KVMessage.StatusType;
+import shared.metadata.MetaData;
+import shared.metadata.ServerData;
 
 import java.io.File;
+import java.math.BigInteger;
 
 public class InteractionTest extends TestCase {
 
@@ -144,7 +149,25 @@ public class InteractionTest extends TestCase {
 
 		assertTrue(ex == null && response.getStatus() == StatusType.GET_ERROR);
 	}
-	
 
+	@Test
+	public void testSerializeAdminMsg() {
+		reset();
+		String key = "an unset value";
+		KVMessage response = null;
+		Exception ex = null;
 
+		MetaData meta = new MetaData();
+		meta.addServer(BigInteger.TEN, new ServerData("name", "host", 123));
+		meta.addServer(BigInteger.ONE, new ServerData("name2", "host2", 1234));
+
+		KVAdminMessage msg = new KVAdminMessage(IKVAdminMessage.ActionType.START, null);
+		msg.setMetaData(meta);
+
+		try {
+			kvClient.sendAdmin(msg);
+		} catch (Exception e) {
+			ex = e;
+		}
+	}
 }

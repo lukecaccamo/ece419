@@ -2,6 +2,7 @@ package client;
 
 import java.net.Socket;
 
+import shared.messages.KVAdminMessage;
 import shared.messages.KVMessage.StatusType;
 import shared.communications.KVCommModule;
 import shared.messages.KVSimpleMessage;
@@ -69,4 +70,11 @@ public class KVStore implements KVCommInterface {
 		this.communications.sendKVMessage(StatusType.GET, key, null);
 		return this.communications.receiveKVMessage();
 	}
+
+	// Temporary for testing purposes
+	public void sendAdmin(KVAdminMessage msg) throws Exception {
+
+		this.communications.sendKVAdminMessage(msg);
+	}
+
 }

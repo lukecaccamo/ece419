@@ -14,78 +14,65 @@ public class KVAdminMessage implements Serializable, IKVAdminMessage {
 	private static final char RETURN = 0x0D;
 
 	private ActionType action;
-    private String params = null;
-    private int argCount = 0;
     private MetaData metaData = null;
     private int cacheSize = 0;
     private String replacementStrategy = null;
     private String server = null;
     private String startHash = null;
     private String endHash = null;
+    private String[] range = null;
 
+	public KVAdminMessage() {
+		action = null;
+	}
 
-	String msg;
-	byte[] msgBytes;
-
-	public KVAdminMessage(ActionType action, String ... params) {
+	public KVAdminMessage(ActionType action, MetaData metaData, String ... params) {
 		this.action = action;
-		this.argCount = 0;
 
-		for (String arg : params){
-			this.argCount++;
-			this.params += ADMIN_DELIMIT + arg;
-		}
-
-		this.msg = this.action.toString() + this.params;
-		this.msg.trim();
-
-		//Add MSG ID for sending
-		this.msgBytes = toByteArray(ADMIN_ID + this.msg);
-
-		if (this.params != null)
-			updateParams(action, this.params);
+		if (metaData != null || params.length > 0)
+			updateParams(action, metaData, params);
 	}
 
-	/**
-	 * Returns the content of this KVMessage as a String.
-	 * 
-	 * @return the content of this message in String format.
-	 */
-	public String getMsg() {
-		return this.msg;
+	// Set
+	public void setAction(ActionType action) {
+		this.action = action;
 	}
 
-	/**
-	 * Returns an array of bytes that represent the ASCII coded message content.
-	 * 
-	 * @return the content of this message as an array of bytes 
-	 * 		in ASCII coding.
-	 */
-	public byte[] getMsgBytes() {
-		return this.msgBytes;
+	public void setMetaData(MetaData metaData) {
+		this.metaData = metaData;
 	}
 
-	/**
-	 * @return the key that is associated with this message, 
-	 * 		null if not key is associated.
-	 */
+	public void setCacheSize(int cacheSize) {
+		this.cacheSize = cacheSize;
+	}
+
+	public void setReplacementStrategy(String replacementStrategy) {
+		this.replacementStrategy = replacementStrategy;
+	}
+
+	public void setServer(String server) {
+		this.server = server;
+	}
+
+	public void setRange(String[] range) {
+		this.range = range;
+	}
+
+	public void setStartHash(String startHash) {
+		this.startHash = startHash;
+		range = new String[] {startHash, this.endHash};
+	}
+
+	public void setEndHash(String endHash) {
+		this.endHash = endHash;
+		range = new String[] {this.startHash, endHash};
+	}
+
+
+	// Get
 	@Override
 	public ActionType getAction() {
 		return action;
-	}
-
-	/**
-	 * @return the value that is associated with this message, 
-	 * 		null if not value is associated.
-	 */
-	@Override
-	public String getParams() {
-		return params;
-	}
-
-	@Override
-	public int getArgCount() {
-		return argCount;
 	}
 
 	public MetaData getMetaData() {
@@ -113,37 +100,25 @@ public class KVAdminMessage implements Serializable, IKVAdminMessage {
 	}
 
 	public String [] getRange() {
-		return new String[] {startHash, endHash};
+		return range;
 	}
 
-
-	private byte[] toByteArray(String s){
-		byte[] bytes = s.getBytes();
-		byte[] ctrBytes = new byte[]{LINE_FEED, RETURN};
-		byte[] tmp = new byte[bytes.length + ctrBytes.length];
-		
-		System.arraycopy(bytes, 0, tmp, 0, bytes.length);
-		System.arraycopy(ctrBytes, 0, tmp, bytes.length, ctrBytes.length);
-		
-		return tmp;		
-	}
-
-	private void updateParams(ActionType action, String params) {
-		String[] tokens = msg.split(ADMIN_DELIMIT);
+	private void updateParams(ActionType action, MetaData metaData, String[] params) {
 
 		switch (action) {
 			case INIT:
-				metaData = new MetaData(tokens[0]);
-				cacheSize = Integer.getInteger(tokens[1]);
-				replacementStrategy = tokens[2];
+				this.metaData = metaData;
+				cacheSize = Integer.getInteger(params[0]);
+				replacementStrategy = params[1];
 				break;
 			case MOVE_DATA:
-				startHash = tokens[0];
-				endHash = tokens[1];
-				server = tokens[2];
+				startHash = params[0];
+				endHash = params[1];
+				server = params[2];
+				range = new String[] {params[0], params[1]};
 				break;
 			case UPDATE:
-				metaData = new MetaData(tokens[0]);
+				this.metaData = metaData;
 				break;
 			default:
 				break;

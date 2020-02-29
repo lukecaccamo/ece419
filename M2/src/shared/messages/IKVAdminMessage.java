@@ -25,15 +25,6 @@ public interface IKVAdminMessage {
 	 */
 	public ActionType getAction();
 	
-	/**
-	 * @return the parameters for the requested action
-	 */
-	public String getParams();
-
-	/**
-	 * @return the number of arguments for the requested action
-	 */
-	public int getArgCount();
 }
 
 

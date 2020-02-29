@@ -1,11 +1,11 @@
 package shared.communications;
 
 import app_kvServer.KVServer;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.log4j.Logger;
 import shared.exceptions.DeleteException;
 import shared.exceptions.GetException;
 import shared.exceptions.PutException;
-import shared.messages.IKVAdminMessage;
 import shared.messages.KVAdminMessage;
 import shared.messages.KVMessage;
 import shared.messages.KVMessage.StatusType;
@@ -16,13 +16,12 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
 
-import static shared.messages.IKVAdminMessage.ADMIN_DELIMIT;
-import static shared.messages.IKVAdminMessage.ADMIN_ID;
 import static shared.messages.KVMessage.SIMPLE_ID;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-
 public class KVCommModule implements Runnable {
+
+	private static final char LINE_FEED = 0x0A;
+	private static final char RETURN = 0x0D;
 
 	private Logger logger = Logger.getRootLogger();
 	private KVServer server;
@@ -50,6 +49,7 @@ public class KVCommModule implements Runnable {
 		this.serverAddress = this.socket.getInetAddress().getHostAddress();
 		this.serverPort = this.socket.getLocalPort();
 		this.setRunning(true);
+
 		this.om = new ObjectMapper();
 		logger.info("Connection established");
 	}
@@ -69,11 +69,8 @@ public class KVCommModule implements Runnable {
 						msg = msg.replaceFirst(SIMPLE_ID, "");
 						KVMessage kvMsg = processKVSimpleMessage(msg);
 						sendKVSimpleMsgResponse(kvMsg.getStatus(), kvMsg.getKey(), kvMsg.getValue());
-					}
-
-					if (msg.contains(ADMIN_ID)) {
-						msg = msg.replaceFirst(ADMIN_ID, "");
-						KVAdminMessage adminMsg = processKVAdminMessage(msg);
+					} else {
+						KVAdminMessage adminMsg = om.readValue(msg, KVAdminMessage.class);
 						sendKVAdminMsgResponse(adminMsg);
 					}
 
@@ -165,15 +162,26 @@ public class KVCommModule implements Runnable {
 		byte[] msgBytes = msg.getMsgBytes();
 		this.output.write(msgBytes, 0, msgBytes.length);
 		this.output.flush();
-		logger.info("Send message:\t '" + msg.getMsg() + "'");
+		logger.info("Send simple message:\t '" + msg.getMsg() + "'");
     }
-
 
 	public KVSimpleMessage receiveKVMessage() throws IOException {
 		String msg = getMessage();
 		msg = msg.replaceFirst(SIMPLE_ID, "");
 		return processKVSimpleMessage(msg);
+	}
+
+	public void sendKVAdminMessage(KVAdminMessage msg) throws IOException {
+
+		String adminMsg = om.writeValueAsString(msg);
+
+		byte[] msgBytes = toByteArray(adminMsg); //om.writeValueAsBytes(msg);
+		this.output.write(msgBytes, 0, msgBytes.length);
+		this.output.flush();
+		logger.info("Send admin message:\t '" + adminMsg + "'");
     }
+
+
 
 	private String getMessage() throws IOException {
 		int index = 0;
@@ -203,7 +211,7 @@ public class KVCommModule implements Runnable {
 			}
 
 			/* only read valid characters, i.e. letters and numbers */
-			if((read > 31 && read < 127)) {
+			if(read > 0 ) {
 				bufferBytes[index] = read;
 				index++;
 			}
@@ -319,7 +327,7 @@ public class KVCommModule implements Runnable {
 
 		return;
 	}
-
+/*
 	private KVAdminMessage processKVAdminMessage(String msg) {
 		String[] tokens = msg.split(ADMIN_DELIMIT);
 
@@ -340,7 +348,7 @@ public class KVCommModule implements Runnable {
 
 		return adminMsg;
 	}
-
+*/
 	private KVSimpleMessage processKVSimpleMessage(String msg) {
 		String[] tokens = msg.split("\\s+");
 
@@ -373,4 +381,16 @@ public class KVCommModule implements Runnable {
 		logger.info("Receive message:\t '" + ret.getMsg() + "'");
 		return ret;
 	}
+
+	private byte[] toByteArray(String s){
+		byte[] bytes = s.getBytes();
+		byte[] ctrBytes = new byte[]{LINE_FEED, RETURN};
+		byte[] tmp = new byte[bytes.length + ctrBytes.length];
+
+		System.arraycopy(bytes, 0, tmp, 0, bytes.length);
+		System.arraycopy(ctrBytes, 0, tmp, bytes.length, ctrBytes.length);
+
+		return tmp;
+	}
+
 }

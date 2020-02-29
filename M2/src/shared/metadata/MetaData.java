@@ -3,8 +3,6 @@ package shared.metadata;
 import java.math.BigInteger;
 import java.util.*;
 
-import shared.serverdata.ServerData;
-
 public class MetaData {
     // map start index to ServerData
     private TreeMap<BigInteger, ServerData> hashRing;
@@ -15,6 +13,14 @@ public class MetaData {
 
     public void clear() {
         this.hashRing.clear();
+    }
+
+    public TreeMap<BigInteger, ServerData> getHashRing() {
+        return hashRing;
+    }
+
+    public void setHashRing(TreeMap<BigInteger, ServerData> hashRing) {
+        this.hashRing = hashRing;
     }
 
     // this will be called by ecs
