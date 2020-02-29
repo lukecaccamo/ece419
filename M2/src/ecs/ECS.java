@@ -6,6 +6,7 @@ import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.TreeMap;
 import java.util.Map;
 import java.util.Properties;
@@ -19,6 +20,7 @@ import app_kvServer.IKVServer;
 import app_kvServer.IKVServer.ServerStateType;
 import ecs.IECS;
 import ecs.IECSNode.IECSNodeFlag;
+import shared.metadata.Hash;
 import shared.metadata.MetaData;
 
 public class ECS implements IECS {
@@ -40,8 +42,8 @@ public class ECS implements IECS {
             ProcessBuilder zookeeperProcessBuilder =
                     new ProcessBuilder(ZOOKEEPER_SCRIPT_PATH, "start", ZOOKEEPER_CONF_PATH)
                             .inheritIO();
-            Process zooKeeperProcess = zookeeperProcessBuilder.inheritIO().start();
-            zooKeeperProcess.waitFor();
+            Process zookeeperProcess = zookeeperProcessBuilder.inheritIO().start();
+            zookeeperProcess.waitFor();
 
             connected = new CountDownLatch(1);
             Watcher watcher = new Watcher() {
@@ -73,8 +75,6 @@ public class ECS implements IECS {
 
                 IECSNode node = new ECSNode(key, host, Integer.parseInt(port));
                 this.servers.put(node.getHashKey(), node);
-
-                System.out.println(node.getHashKey());
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -90,12 +90,8 @@ public class ECS implements IECS {
      */
     @Override
     public boolean start() {
-        IECSNodeFlag nodeFlag = IECSNodeFlag.START;
-        for (Map.Entry<String, IECSNode> e : this.hashRing.entrySet()) {
-            IECSNode node = e.getValue();
-            node.setFlag(nodeFlag);
-        }
-        return true;
+        // TODO
+        return false;
     }
 
     /**
@@ -107,12 +103,8 @@ public class ECS implements IECS {
      */
     @Override
     public boolean stop() {
-        IECSNodeFlag nodeFlag = IECSNodeFlag.STOP;
-        for (Map.Entry<String, IECSNode> e : this.hashRing.entrySet()) {
-            IECSNode node = e.getValue();
-            node.setFlag(nodeFlag);
-        }
-        return true;
+        // TODO
+        return false;
     }
 
     /**
@@ -123,10 +115,12 @@ public class ECS implements IECS {
      */
     @Override
     public boolean shutdown() {
-        IECSNodeFlag nodeFlag = IECSNodeFlag.SHUT_DOWN;
-        for (Map.Entry<String, IECSNode> e : this.hashRing.entrySet()) {
-            IECSNode node = e.getValue();
-            node.setFlag(nodeFlag);
+        Iterator<Map.Entry<String, IECSNode>> it = this.hashRing.entrySet().iterator();
+        while (it.hasNext()) {
+            Map.Entry<String, IECSNode> e = it.next();
+            ECSNode node = (ECSNode) e.getValue();
+            node.shutdownKVServer();
+            it.remove();
         }
         return true;
     }
@@ -139,19 +133,17 @@ public class ECS implements IECS {
      */
     @Override
     public IECSNode addNode(String cacheStrategy, int cacheSize) {
-        IECSNode node = null;
+        ECSNode node = null;
         try {
             for (Map.Entry<String, IECSNode> e : servers.entrySet()) {
-                node = e.getValue();
-                if (node.getFlag() == IECSNodeFlag.SHUT_DOWN) {
-                    node.setFlag(IECSNodeFlag.STOP);
+                node = (ECSNode) e.getValue();
+                if (node.getFlag() == IECSNodeFlag.SHUT_DOWN)
                     break;
-                }
             }
-            hashRing.put(node.getHashKey(), node);
+            this.hashRing.put(node.getHashKey(), node);
 
             String prevHash = null;
-            for (Map.Entry<String, IECSNode> e : hashRing.entrySet()) {
+            for (Map.Entry<String, IECSNode> e : this.hashRing.entrySet()) {
                 if (prevHash != null) {
                     IECSNode n = e.getValue();
                     n.setNodeHashRange(prevHash, e.getKey());
@@ -161,6 +153,11 @@ public class ECS implements IECS {
             String firstHash = hashRing.firstKey();
             IECSNode n = hashRing.get(firstHash);
             n.setNodeHashRange(prevHash, firstHash);
+
+            MetaData metaData = new MetaData(node.getNodeName(), node.getNodeHost(),
+                    node.getNodePort(), node.getNodeHashRange()[0], node.getNodeHashRange()[1]);
+            node.setMetaData(metaData);
+            node.startKVServer();
         } catch (Exception e) {
             logger.error(e);
         }
@@ -218,7 +215,17 @@ public class ECS implements IECS {
      */
     @Override
     public boolean removeNodes(Collection<String> nodeNames) {
-        // TODO
+        for (String name : nodeNames) {
+            Iterator<Map.Entry<String, IECSNode>> it = this.hashRing.entrySet().iterator();
+            while (it.hasNext()) {
+                Map.Entry<String, IECSNode> e = it.next();
+                ECSNode node = (ECSNode) e.getValue();
+                if (node.getNodeName().equals(name)) {
+                    node.shutdownKVServer();
+                    it.remove();
+                }
+            }
+        }
         return false;
     }
 
@@ -235,7 +242,6 @@ public class ECS implements IECS {
      */
     @Override
     public IECSNode getNodeByKey(String Key) {
-        // TODO
-        return null;
+        return this.hashRing.get(Key);
     }
 }

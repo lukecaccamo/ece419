@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.*;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Map;
 
@@ -84,8 +85,9 @@ public class ECSClient implements IECSClient {
                     String cacheStrategy = tokens[2];
                     int cacheSize = Integer.parseInt(tokens[3]);
                     Collection<IECSNode> nodes = this.addNodes(count, cacheStrategy, cacheSize);
+                    printInfo("HashRing:");
                     for (Map.Entry<String, IECSNode> e : this.getNodes().entrySet()) {
-                        printInfo("Added " + e.getValue().getNodeName() + " (" + e.getValue().getNodeHashRange()[0] + ", " + e.getValue().getNodeHashRange()[1] + ")");
+                        printInfo("\t" + e.getValue().getNodeName() + " (" + e.getValue().getNodeHashRange()[0] + ", " + e.getValue().getNodeHashRange()[1] + ")");
                     }
                 } else {
                     printError("Invalid number of parameters!");
@@ -93,6 +95,14 @@ public class ECSClient implements IECSClient {
                 break;
             case "remove":
                 if (tokens.length == 2) {
+                    String nodeName = tokens[1];
+                    Collection<String> nodeNames = new ArrayList<>();
+                    nodeNames.add(nodeName);
+                    this.removeNodes(nodeNames);
+                    printInfo("HashRing:");
+                    for (Map.Entry<String, IECSNode> e : this.getNodes().entrySet()) {
+                        printInfo("\t" + e.getValue().getNodeName() + " (" + e.getValue().getNodeHashRange()[0] + ", " + e.getValue().getNodeHashRange()[1] + ")");
+                    }
                 } else {
                     printError("Invalid number of parameters!");
                 }
@@ -245,8 +255,8 @@ public class ECSClient implements IECSClient {
         sb.append("\t choose " + ANSI_BLUE + "<n> " + ANSI_RESET
                 + "servers from available machines and start them with cache options " + ANSI_BLUE
                 + "<size> " + ANSI_RESET + "and " + ANSI_BLUE + "<strategy> \n");
-        sb.append(PROMPT).append(ANSI_BOLD + "remove " + ANSI_BLUE + "<i>" + ANSI_RESET);
-        sb.append("\t\t remove a server from the storage service at position " + ANSI_BLUE + "<i>"
+        sb.append(PROMPT).append(ANSI_BOLD + "remove " + ANSI_BLUE + "<name>" + ANSI_RESET);
+        sb.append("\t\t remove a server from the storage service with name " + ANSI_BLUE + "<name>"
                 + ANSI_RESET + "\n");
 
         sb.append(PROMPT).append(ANSI_BOLD + "logLevel" + ANSI_RESET);

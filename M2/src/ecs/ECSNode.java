@@ -4,7 +4,12 @@ import app_kvServer.IKVServer.CacheStrategy;
 import shared.metadata.Hash;
 import shared.metadata.MetaData;
 
+import org.apache.log4j.Logger;
+
 public class ECSNode implements IECSNode {
+    private static String M2_PATH = System.getProperty("user.dir");
+    private static String SSH_SCRIPT_PATH = M2_PATH + "/startKVServer.sh";
+    private static Logger logger = Logger.getRootLogger();
 
     private String hash;
     private String name;
@@ -15,6 +20,7 @@ public class ECSNode implements IECSNode {
     private MetaData metaData;
     private int cacheSize;
     private CacheStrategy cacheStrategy;
+    Process kvServerProcess;
 
     public ECSNode(String name, String host, int port) {
         this.hash = Hash.MD5(host + ":" + port);
@@ -26,6 +32,35 @@ public class ECSNode implements IECSNode {
         this.metaData = null;
         this.cacheSize = 0;
         this.cacheStrategy = CacheStrategy.None;
+        this.kvServerProcess = null;
+    }
+
+    public IECSNodeFlag startKVServer() {
+        if (this.flag == IECSNodeFlag.SHUT_DOWN) {
+            String[] command = {SSH_SCRIPT_PATH, this.host, Integer.toString(this.port),
+                Integer.toString(this.cacheSize), this.cacheStrategy.toString()};
+
+            try {
+                ProcessBuilder kvServerProcessBuilder = new ProcessBuilder(command).inheritIO();
+                this.kvServerProcess = kvServerProcessBuilder.start();
+                this.flag = IECSNodeFlag.START;
+            } catch (Exception e) {
+                logger.error(e);
+            }
+        }
+        return this.flag;
+    }
+
+    public IECSNodeFlag shutdownKVServer() {
+        if (this.flag != IECSNodeFlag.SHUT_DOWN) {
+            try {
+                this.kvServerProcess.destroy();
+                this.flag = IECSNodeFlag.SHUT_DOWN;
+            } catch (Exception e) {
+                logger.error(e);
+            }
+        }
+        return this.flag;
     }
 
     /**
