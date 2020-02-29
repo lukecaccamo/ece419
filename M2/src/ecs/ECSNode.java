@@ -20,7 +20,6 @@ public class ECSNode implements IECSNode {
     private MetaData metaData;
     private int cacheSize;
     private CacheStrategy cacheStrategy;
-    Process kvServerProcess;
 
     public ECSNode(String name, String host, int port) {
         this.hash = Hash.MD5(host + ":" + port);
@@ -32,7 +31,6 @@ public class ECSNode implements IECSNode {
         this.metaData = null;
         this.cacheSize = 0;
         this.cacheStrategy = CacheStrategy.None;
-        this.kvServerProcess = null;
     }
 
     public IECSNodeFlag startKVServer() {
@@ -42,20 +40,8 @@ public class ECSNode implements IECSNode {
 
             try {
                 ProcessBuilder kvServerProcessBuilder = new ProcessBuilder(command).inheritIO();
-                this.kvServerProcess = kvServerProcessBuilder.start();
+                Process kvServerProcess = kvServerProcessBuilder.start();
                 this.flag = IECSNodeFlag.START;
-            } catch (Exception e) {
-                logger.error(e);
-            }
-        }
-        return this.flag;
-    }
-
-    public IECSNodeFlag shutdownKVServer() {
-        if (this.flag != IECSNodeFlag.SHUT_DOWN) {
-            try {
-                this.kvServerProcess.destroy();
-                this.flag = IECSNodeFlag.SHUT_DOWN;
             } catch (Exception e) {
                 logger.error(e);
             }

@@ -19,6 +19,7 @@ import org.apache.zookeeper.data.Stat;
 import app_kvServer.IKVServer;
 import app_kvServer.IKVServer.ServerStateType;
 import ecs.IECS;
+import ecs.IECSNode.ECSNodeFlag;
 import ecs.IECSNode.IECSNodeFlag;
 import shared.metadata.Hash;
 import shared.metadata.MetaData;
@@ -81,6 +82,17 @@ public class ECS implements IECS {
         }
     }
 
+    private boolean broadcast(IECSNodeFlag flag) {
+        Iterator<Map.Entry<String, IECSNode>> it = this.hashRing.entrySet().iterator();
+        while (it.hasNext()) {
+            Map.Entry<String, IECSNode> e = it.next();
+            ECSNode node = (ECSNode) e.getValue();
+            node.setFlag(flag);
+            if (flag == IECSNodeFlag.SHUT_DOWN) it.remove();
+        }
+        return true;
+    }
+
     /**
      * Starts the storage service by calling start() on all KVServer instances that participate in
      * the service.
@@ -90,8 +102,7 @@ public class ECS implements IECS {
      */
     @Override
     public boolean start() {
-        // TODO
-        return false;
+        return this.broadcast(IECSNodeFlag.START);
     }
 
     /**
@@ -103,8 +114,7 @@ public class ECS implements IECS {
      */
     @Override
     public boolean stop() {
-        // TODO
-        return false;
+        return this.broadcast(IECSNodeFlag.STOP);
     }
 
     /**
@@ -115,14 +125,7 @@ public class ECS implements IECS {
      */
     @Override
     public boolean shutdown() {
-        Iterator<Map.Entry<String, IECSNode>> it = this.hashRing.entrySet().iterator();
-        while (it.hasNext()) {
-            Map.Entry<String, IECSNode> e = it.next();
-            ECSNode node = (ECSNode) e.getValue();
-            node.shutdownKVServer();
-            it.remove();
-        }
-        return true;
+        return this.broadcast(IECSNodeFlag.SHUT_DOWN);
     }
 
     /**
@@ -221,7 +224,7 @@ public class ECS implements IECS {
                 Map.Entry<String, IECSNode> e = it.next();
                 ECSNode node = (ECSNode) e.getValue();
                 if (node.getNodeName().equals(name)) {
-                    node.shutdownKVServer();
+                    node.setFlag(IECSNodeFlag.SHUT_DOWN);
                     it.remove();
                 }
             }
