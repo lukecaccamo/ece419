@@ -5,6 +5,7 @@ import app_kvServer.KVCache.IKVCache;
 import app_kvServer.KVCache.LFUCache;
 import app_kvServer.KVCache.LRUCache;
 import app_kvServer.IKVServer.ServerStateType;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import logger.LogSetup;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
@@ -12,16 +13,19 @@ import shared.communications.KVCommModule;
 import shared.exceptions.DeleteException;
 import shared.exceptions.GetException;
 import shared.exceptions.PutException;
+import shared.metadata.Hash;
 import shared.metadata.MetaData;
 import shared.metadata.ServerData;
 
 import java.io.IOException;
+import java.math.BigInteger;
 import java.net.*;
 
 public class KVServer implements IKVServer, Runnable {
 
 	private static Logger logger = Logger.getRootLogger();
 
+	private String host;
 	private int port;
 	private String strategy;
 	private int cacheSize;
@@ -31,6 +35,8 @@ public class KVServer implements IKVServer, Runnable {
 	private IKVCache cache;
 	private KVDatabase db;
 	private MetaData metaData;
+	private BigInteger serverHash;
+	private ObjectMapper om;
 	private static final String DELETE_VAL = "null";
 	/**
 	 * Start KV Server at given port
@@ -48,13 +54,22 @@ public class KVServer implements IKVServer, Runnable {
 		this.cacheSize = cacheSize;
 		this.strategy = strategy;
 		this.serverStateType = ServerStateType.STOPPED;
+		this.host = "";
+
+		try {
+			InetAddress localhost = InetAddress.getLocalHost();
+			this.host = (localhost.getHostAddress()).trim();
+		} catch (UnknownHostException e) {
+			e.printStackTrace();
+		}
+
+		this.serverHash = Hash.MD5_BI(this.host + ":" + this.port);
+		this.om = new ObjectMapper();
 
 		assignCache(strategy);
 
 		db = new KVDatabase();
 		new Thread(this).start();
-		//db = new KVDatabase();
-
 	}
 
 	// M2
@@ -107,6 +122,11 @@ public class KVServer implements IKVServer, Runnable {
 
 	public void isWriterLocked() {
 
+	}
+
+	public boolean inServer(String key){
+		BigInteger keyHash = Hash.MD5_BI(key);
+		return this.metaData.inServer(keyHash, this.serverHash);
 	}
 
 	// M1

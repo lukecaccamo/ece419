@@ -1,6 +1,7 @@
 package shared.communications;
 
 import app_kvServer.KVServer;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.log4j.Logger;
 import shared.exceptions.DeleteException;
@@ -10,6 +11,7 @@ import shared.messages.KVAdminMessage;
 import shared.messages.KVMessage;
 import shared.messages.KVMessage.StatusType;
 import shared.messages.KVSimpleMessage;
+import shared.metadata.MetaData;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -31,7 +33,7 @@ public class KVCommModule implements Runnable {
 	private Socket socket;
 	private OutputStream output;
  	private InputStream input;
-
+	
 	private static final int BUFFER_SIZE = 1024;
 	private static final int DROP_SIZE = 1024 * BUFFER_SIZE;
 	private static final String DELETE_VALUE = "null";
@@ -120,7 +122,7 @@ public class KVCommModule implements Runnable {
 
 	public void disconnect() {
 		logger.info("try to close connection ...");
-
+		
 		try {
 			tearDownConnection();
 		} catch (IOException ioe) {
@@ -191,7 +193,7 @@ public class KVCommModule implements Runnable {
 		msg = msg.replaceFirst(ADMIN_ID, "");
 		return om.readValue(msg, KVAdminMessage.class);
 	}
-	
+
 	private String getMessage() throws IOException {
 		int index = 0;
 		byte[] msgBytes = null, tmp = null;
@@ -256,18 +258,15 @@ public class KVCommModule implements Runnable {
 		String key = msg.getKey();
 		String value = msg.getValue();
 
+		if (!server.inServer(key)){
+			// TODO: AND send new metadata back as value?
+			// need to serialize metadata
+			String mdString = om.writeValueAsString(server.getMetaData());
+			sendKVMessage(StatusType.SERVER_NOT_RESPONSIBLE, key, mdString);
+			return;
+		}
+
 		switch (status) {
-			// TODO: check if range is correct for BOTH GET and PUT
-			/*
-			// hash key using MD5, create serverData using name,host,port
-			if (!inServer(keyHash, serverData)){
-				// TODO: AND send new metadata back as value?
-				// need to serialize metadata
-				mdString = om.writeValueAsString(this.metadata);
-				sendKVMessage(StatusType.SERVER_NOT_RESPONSIBLE, key, mdString);
-				return;
-			}
-			*/
 			case GET:
 
 				value = server.getKV(key);
@@ -351,4 +350,5 @@ public class KVCommModule implements Runnable {
 
 		return tmp;
 	}
+
 }
