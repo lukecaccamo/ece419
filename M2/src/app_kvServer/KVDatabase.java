@@ -22,18 +22,20 @@ public class KVDatabase {
 
     private String indexFile = "index.txt";
     private String databaseFile = "databaseFile.db";
+    private int port;
     //byte for valid, 4 bytes per lengths (ints)
     private Integer entryLength = 1 + 4 + 4 + 20 + 128000;
     private HashMap<String, Integer> index;
 
-    public KVDatabase() {
+    public KVDatabase(int port) {
         // Map<String, Long> index = new HashMap<String, long>();
+        this.port = port;
         initDB();
         index = loadIndex();
     }
 
     public void initDB(){
-        File database = new File(databaseFile);
+        File database = new File(this.port + databaseFile);
         if (!database.exists()){
             try {
                 database.createNewFile();

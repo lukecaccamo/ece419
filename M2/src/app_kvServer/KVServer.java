@@ -68,7 +68,7 @@ public class KVServer implements IKVServer, Runnable {
 
 		assignCache(strategy);
 
-		db = new KVDatabase();
+		db = new KVDatabase(this.port);
 		new Thread(this).start();
 	}
 

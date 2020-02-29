@@ -81,7 +81,7 @@ public class KVStore implements KVCommInterface {
 				e.printStackTrace();
 			}
 			// set value to say metadata instead of the entire serialization
-			// returnMsg.setValue();
+			returnMsg.setValue("new metadata received");
 		}
 		return returnMsg;
 	}
