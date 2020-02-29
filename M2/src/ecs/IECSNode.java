@@ -63,5 +63,5 @@ public interface IECSNode {
      */
     public MetaData getMetaData();
 
-    public void setMetaData(MetaData metaData);
+    public void setMetaData();
 }

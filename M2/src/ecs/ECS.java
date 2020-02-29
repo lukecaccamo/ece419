@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.TreeMap;
 import java.util.Map;
 import java.util.Properties;
@@ -24,6 +25,9 @@ import ecs.IECSNode.IECSNodeFlag;
 import shared.metadata.Hash;
 import shared.metadata.MetaData;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import shared.communications.KVCommModule;
+
 public class ECS implements IECS {
     private static String M2_PATH = System.getProperty("user.dir");
     private static String ZOOKEEPER_PATH = M2_PATH + "/zookeeper-3.4.11";
@@ -38,7 +42,9 @@ public class ECS implements IECS {
     private ZooKeeper zookeeper;
     private CountDownLatch connected;
 
-    public ECS(String configFilePath) {
+    private ObjectMapper objectMapper;
+
+    private void initializeZooKeeper() {
         try {
             ProcessBuilder zookeeperProcessBuilder =
                     new ProcessBuilder(ZOOKEEPER_SCRIPT_PATH, "start", ZOOKEEPER_CONF_PATH)
@@ -58,13 +64,11 @@ public class ECS implements IECS {
             this.zookeeper = new ZooKeeper("localhost", 3000, watcher);
             connected.await();
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error(e);
         }
+    }
 
-        this.properties = new Properties();
-        this.servers = new HashMap<>();
-        this.hashRing = new TreeMap<>();
-
+    private void initializeServers(String configFilePath) {
         try {
             InputStream configFile = new FileInputStream(configFilePath);
             this.properties.load(configFile);
@@ -78,7 +82,53 @@ public class ECS implements IECS {
                 this.servers.put(node.getHashKey(), node);
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error(e);
+        }
+    }
+
+    private void clearZooKeeperNodes() {
+        try {
+            Stat s = zookeeper.exists("/AwaitNode", false);
+            if (s != null) {
+                List<String> list = zookeeper.getChildren("/AwaitNode", false);
+
+                for (String nodeName : list) {
+                    zookeeper.delete("/AwaitNode/" + nodeName, -1);
+                }
+                zookeeper.delete("/AwaitNode", -1);
+            }
+
+            if (this.hashRing != null) {
+                Iterator it = this.hashRing.entrySet().iterator();
+                while (it.hasNext()) {
+                    Map.Entry<String, ECSNode> entry = (Map.Entry<String, ECSNode>) it.next();
+                    IECSNode node = entry.getValue();
+                    String zkNodeName = "/" + node.getNodeName();
+                    try {
+                        if (zookeeper.exists(zkNodeName, true) != null)
+                            zookeeper.delete(zkNodeName, -1);
+                    } catch (KeeperException e) {
+                        logger.error(e);
+                    }
+                }
+            }
+        } catch (KeeperException | InterruptedException e) {
+            logger.error(e);
+        }
+    }
+
+    private void initializeZooKeeperNodes() {
+        try {
+            if (this.zookeeper != null) {
+                String path = "/AwaitNode";
+                Stat s = this.zookeeper.exists(path, false);
+                if (s == null) {
+                    this.zookeeper.create(path, new byte[0], ZooDefs.Ids.OPEN_ACL_UNSAFE,
+                            CreateMode.PERSISTENT);
+                }
+            }
+        } catch (KeeperException | InterruptedException e) {
+            logger.error(e);
         }
     }
 
@@ -88,9 +138,48 @@ public class ECS implements IECS {
             Map.Entry<String, IECSNode> e = it.next();
             ECSNode node = (ECSNode) e.getValue();
             node.setFlag(flag);
-            if (flag == IECSNodeFlag.SHUT_DOWN) it.remove();
+            if (flag == IECSNodeFlag.SHUT_DOWN)
+                it.remove();
         }
         return true;
+    }
+
+    private void updateRingRanges() {
+        String prevHash = null;
+        for (Map.Entry<String, IECSNode> entry : this.hashRing.entrySet()) {
+            if (prevHash != null) {
+                IECSNode n = entry.getValue();
+                n.setNodeHashRange(prevHash, entry.getKey());
+            }
+            prevHash = entry.getKey();
+        }
+        String firstHash = hashRing.firstKey();
+        IECSNode n = hashRing.get(firstHash);
+        n.setNodeHashRange(prevHash, firstHash);
+    }
+
+    private void updateRingMetaData() {
+        for (Map.Entry<String, IECSNode> entry : this.hashRing.entrySet()) {
+            IECSNode n = entry.getValue();
+            n.setMetaData();
+        }
+    }
+
+    private void awaitMigration(String zkNodeName) {
+        return null;
+    }
+
+    public ECS(String configFilePath) {
+        this.properties = new Properties();
+        this.servers = new HashMap<>();
+        this.hashRing = new TreeMap<>();
+
+        this.objectMapper = new ObjectMapper();
+
+        this.initializeZooKeeper();
+        this.initializeServers(configFilePath);
+        this.clearZooKeeperNodes();
+        this.initializeZooKeeperNodes();
     }
 
     /**
@@ -138,31 +227,26 @@ public class ECS implements IECS {
     public IECSNode addNode(String cacheStrategy, int cacheSize) {
         ECSNode node = null;
         try {
-            for (Map.Entry<String, IECSNode> e : servers.entrySet()) {
-                node = (ECSNode) e.getValue();
+            // Adding new ECSNode into hashRing
+            for (Map.Entry<String, IECSNode> entry : servers.entrySet()) {
+                node = (ECSNode) entry.getValue();
                 if (node.getFlag() == IECSNodeFlag.SHUT_DOWN)
                     break;
             }
             this.hashRing.put(node.getHashKey(), node);
 
-            String prevHash = null;
-            for (Map.Entry<String, IECSNode> e : this.hashRing.entrySet()) {
-                if (prevHash != null) {
-                    IECSNode n = e.getValue();
-                    n.setNodeHashRange(prevHash, e.getKey());
-                }
-                prevHash = e.getKey();
-            }
-            String firstHash = hashRing.firstKey();
-            IECSNode n = hashRing.get(firstHash);
-            n.setNodeHashRange(prevHash, firstHash);
-
-            /*
-            MetaData metaData = new MetaData(node.getNodeName(), node.getNodeHost(),
-                    node.getNodePort(), node.getNodeHashRange()[0], node.getNodeHashRange()[1]);
-            node.setMetaData(metaData);
-            */
+            this.updateRingRanges();
+            this.updateRingMetaData();
             node.startKVServer();
+            awaitNodes(1, 3000);
+
+            String zkNodeName = "/" + node.getNodeName();
+            Stat zkStat = this.zookeeper.exists(zkNodeName, true);
+            String serializedMetaData = objectMapper.writeValueAsString(node.getMetaData());
+            byte[] jsonBytes = KVCommModule.toByteArray(serializedMetaData);
+            System.out.println(serializedMetaData);
+            this.zookeeper.setData(zkNodeName, jsonBytes, zkStat.getVersion());
+            awaitMigration(zkNodeName);
         } catch (Exception e) {
             logger.error(e);
         }
@@ -208,7 +292,12 @@ public class ECS implements IECS {
      */
     @Override
     public boolean awaitNodes(int count, int timeout) throws Exception {
-        // TODO
+        long start = System.currentTimeMillis();
+        while (System.currentTimeMillis() - start < timeout) {
+            List<String> awaitNodes = this.zookeeper.getChildren("/AwaitNode", true);
+            if (awaitNodes.size() - this.hashRing.size() == count)
+                return true;
+        }
         return false;
     }
 

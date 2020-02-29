@@ -349,7 +349,7 @@ public class KVCommModule implements Runnable {
 		return;
 	}
 
-	private byte[] toByteArray(String s){
+	public static final byte[] toByteArray(String s){
 		byte[] bytes = s.getBytes();
 		byte[] ctrBytes = new byte[]{LINE_FEED, RETURN};
 		byte[] tmp = new byte[bytes.length + ctrBytes.length];

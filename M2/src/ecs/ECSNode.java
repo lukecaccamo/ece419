@@ -117,7 +117,8 @@ public class ECSNode implements IECSNode {
     }
 
     @Override
-    public void setMetaData(MetaData metaData) {
+    public void setMetaData() {
+        MetaData metaData = new MetaData();
         this.metaData = metaData;
     }
 }
