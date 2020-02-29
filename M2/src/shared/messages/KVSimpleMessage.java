@@ -8,15 +8,18 @@ import java.io.Serializable;
  */
 public class KVSimpleMessage implements Serializable, KVMessage {
 
-	private static final char LINE_FEED = 0x0A;
-	private static final char RETURN = 0x0D;
-
 	private StatusType status;
     private String key;
 	private String value;
 	
 	String msg;
-	byte[] msgBytes;
+
+	public KVSimpleMessage() {
+		this.status = null;
+		this.key = null;
+		this.value = null;
+		this.msg = null;
+	}
 
 	public KVSimpleMessage(StatusType status, String key, String value) {
 		this.status = status;
@@ -27,9 +30,22 @@ public class KVSimpleMessage implements Serializable, KVMessage {
 		if(this.key != null) this.msg += " " + this.key;
 		if(this.value != null) this.msg += " " + this.value;
 		this.msg.trim();
+	}
 
-		//add MSG ID to bytes for sending
-		this.msgBytes = toByteArray(SIMPLE_ID + this.msg);
+	public void setStatus(StatusType status) {
+		this.status = status;
+	}
+
+	public void setKey(String key) {
+		this.key = key;
+	}
+
+	public void setValue(String value) {
+		this.value = value;
+	}
+
+	public void setMsg(String msg) {
+		this.msg = msg;
 	}
 
 	/**
@@ -42,20 +58,10 @@ public class KVSimpleMessage implements Serializable, KVMessage {
 	}
 
 	/**
-	 * Returns an array of bytes that represent the ASCII coded message content.
-	 * 
-	 * @return the content of this message as an array of bytes 
-	 * 		in ASCII coding.
-	 */
-	public byte[] getMsgBytes() {
-		return this.msgBytes;
-	}
-
-	/**
 	 * @return the key that is associated with this message, 
 	 * 		null if not key is associated.
 	 */
-	@Override
+	//@Override
 	public String getKey() {
 		return key;
 	}
@@ -64,7 +70,7 @@ public class KVSimpleMessage implements Serializable, KVMessage {
 	 * @return the value that is associated with this message, 
 	 * 		null if not value is associated.
 	 */
-	@Override
+	//@Override
 	public String getValue() {
 		return value;
 	}
@@ -73,19 +79,8 @@ public class KVSimpleMessage implements Serializable, KVMessage {
 	 * @return a status string that is used to identify request types, 
 	 * response types and error types associated to the message.
 	 */
-	@Override
+	//@Override
 	public StatusType getStatus() {
 		return status;
-	}
-
-	public byte[] toByteArray(String s){
-		byte[] bytes = s.getBytes();
-		byte[] ctrBytes = new byte[]{LINE_FEED, RETURN};
-		byte[] tmp = new byte[bytes.length + ctrBytes.length];
-		
-		System.arraycopy(bytes, 0, tmp, 0, bytes.length);
-		System.arraycopy(ctrBytes, 0, tmp, bytes.length, ctrBytes.length);
-		
-		return tmp;		
 	}
 }

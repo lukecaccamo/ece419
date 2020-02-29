@@ -38,7 +38,7 @@ public interface KVMessage {
 	 * response types and error types associated to the message.
 	 */
 	public StatusType getStatus();
-	
+
 }
 
 

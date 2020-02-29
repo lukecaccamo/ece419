@@ -16,8 +16,6 @@ public interface IKVAdminMessage {
 		GET_METADATA
 	}
 
-	public static final String ADMIN_DELIMIT = "|";
-
 	public static final String ADMIN_ID = "<ADMIN>";
 
 	/**

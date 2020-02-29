@@ -10,21 +10,15 @@ import java.io.Serializable;
  */
 public class KVAdminMessage implements Serializable, IKVAdminMessage {
 
-	private static final char LINE_FEED = 0x0A;
-	private static final char RETURN = 0x0D;
-
 	private ActionType action;
     private MetaData metaData = null;
     private int cacheSize = 0;
-    private String replacementStrategy = null;
+	private String replacementStrategy = null;
     private String server = null;
     private String startHash = null;
     private String endHash = null;
     private String[] range = null;
 
-	public KVAdminMessage() {
-		action = null;
-	}
 
 	public KVAdminMessage(ActionType action, MetaData metaData, String ... params) {
 		this.action = action;
