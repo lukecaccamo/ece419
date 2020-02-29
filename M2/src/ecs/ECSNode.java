@@ -121,4 +121,13 @@ public class ECSNode implements IECSNode {
         MetaData metaData = new MetaData();
         this.metaData = metaData;
     }
+
+    public void setCacheStrategy(String cacheStrategy) {
+        CacheStrategy cacheStrategyEnum = CacheStrategy.valueOf(cacheStrategy);
+        this.cacheStrategy = cacheStrategyEnum;
+    }
+
+    public void setCacheSize(int cacheSize) {
+        this.cacheSize = cacheSize;
+    }
 }
