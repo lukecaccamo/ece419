@@ -161,7 +161,7 @@ public class InteractionTest extends TestCase {
 		meta.addServer(BigInteger.TEN, new ServerData("name", "host", 123));
 		meta.addServer(BigInteger.ONE, new ServerData("name2", "host2", 1234));
 
-		KVAdminMessage msg = new KVAdminMessage(IKVAdminMessage.ActionType.START, null);
+		KVAdminMessage msg = new KVAdminMessage(IKVAdminMessage.ActionType.START, null, null);
 		msg.setMetaData(meta);
 
 		try {

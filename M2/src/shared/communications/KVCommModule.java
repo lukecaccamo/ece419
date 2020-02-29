@@ -1,17 +1,15 @@
 package shared.communications;
 
+import app_kvServer.IKVServer;
 import app_kvServer.KVServer;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.log4j.Logger;
 import shared.exceptions.DeleteException;
 import shared.exceptions.GetException;
 import shared.exceptions.PutException;
 import shared.messages.KVAdminMessage;
-import shared.messages.KVMessage;
 import shared.messages.KVMessage.StatusType;
 import shared.messages.KVSimpleMessage;
-import shared.metadata.MetaData;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -33,7 +31,7 @@ public class KVCommModule implements Runnable {
 	private Socket socket;
 	private OutputStream output;
  	private InputStream input;
-	
+
 	private static final int BUFFER_SIZE = 1024;
 	private static final int DROP_SIZE = 1024 * BUFFER_SIZE;
 	private static final String DELETE_VALUE = "null";
@@ -71,7 +69,16 @@ public class KVCommModule implements Runnable {
 					if (msg.contains(SIMPLE_ID)) {
 						msg = msg.replaceFirst(SIMPLE_ID, "");
 						KVSimpleMessage simpleMessage = om.readValue(msg, KVSimpleMessage.class);
-						sendKVSimpleMsgResponse(simpleMessage);
+
+						// Check if the server can respond to requests
+						if (server.getServerState() == IKVServer.ServerStateType.STOPPED) {
+							sendKVMessage(StatusType.SERVER_STOPPED, simpleMessage.getKey(), simpleMessage.getValue());
+						} else if (server.isWriterLocked() && simpleMessage.getStatus() == StatusType.PUT) {
+							sendKVMessage(StatusType.SERVER_WRITE_LOCK, simpleMessage.getKey(), null);
+						} else {
+							sendKVSimpleMsgResponse(simpleMessage);
+						}
+
 					} else if (msg.contains(ADMIN_ID)){
 						msg = msg.replaceFirst(ADMIN_ID, "");
 						KVAdminMessage adminMsg = om.readValue(msg, KVAdminMessage.class);
@@ -122,7 +129,7 @@ public class KVCommModule implements Runnable {
 
 	public void disconnect() {
 		logger.info("try to close connection ...");
-		
+
 		try {
 			tearDownConnection();
 		} catch (IOException ioe) {
@@ -182,12 +189,14 @@ public class KVCommModule implements Runnable {
 		logger.info("Send admin message:\t '" + adminMsg + "'");
 	}
 
+	// For client
 	public KVSimpleMessage receiveKVMessage() throws IOException {
 		String msg = getMessage();
 		msg = msg.replaceFirst(SIMPLE_ID, "");
 		return om.readValue(msg, KVSimpleMessage.class);
 	}
 
+	// For use on ECS
 	public KVAdminMessage receiveKVAdminMessage() throws IOException {
 		String msg = getMessage();
 		msg = msg.replaceFirst(ADMIN_ID, "");

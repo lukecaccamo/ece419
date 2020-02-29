@@ -1,6 +1,7 @@
 package shared.messages;
 
 import shared.metadata.MetaData;
+import shared.metadata.ServerData;
 
 import java.io.Serializable;
 
@@ -14,17 +15,17 @@ public class KVAdminMessage implements Serializable, IKVAdminMessage {
     private MetaData metaData = null;
     private int cacheSize = 0;
 	private String replacementStrategy = null;
-    private String server = null;
+    private ServerData server = null;
     private String startHash = null;
     private String endHash = null;
     private String[] range = null;
 
 
-	public KVAdminMessage(ActionType action, MetaData metaData, String ... params) {
+	public KVAdminMessage(ActionType action, MetaData metaData, ServerData serverData, String ... params) {
 		this.action = action;
 
 		if (metaData != null || params.length > 0)
-			updateParams(action, metaData, params);
+			updateParams(action, metaData, serverData, params);
 	}
 
 	// Set
@@ -44,7 +45,7 @@ public class KVAdminMessage implements Serializable, IKVAdminMessage {
 		this.replacementStrategy = replacementStrategy;
 	}
 
-	public void setServer(String server) {
+	public void setServer(ServerData server) {
 		this.server = server;
 	}
 
@@ -81,7 +82,7 @@ public class KVAdminMessage implements Serializable, IKVAdminMessage {
 		return replacementStrategy;
 	}
 
-	public String getServer() {
+	public ServerData getServer() {
 		return server;
 	}
 
@@ -97,7 +98,7 @@ public class KVAdminMessage implements Serializable, IKVAdminMessage {
 		return range;
 	}
 
-	private void updateParams(ActionType action, MetaData metaData, String[] params) {
+	private void updateParams(ActionType action, MetaData metaData, ServerData serverData, String[] params) {
 
 		switch (action) {
 			case INIT:
@@ -108,7 +109,7 @@ public class KVAdminMessage implements Serializable, IKVAdminMessage {
 			case MOVE_DATA:
 				startHash = params[0];
 				endHash = params[1];
-				server = params[2];
+				server = serverData;
 				range = new String[] {params[0], params[1]};
 				break;
 			case UPDATE:

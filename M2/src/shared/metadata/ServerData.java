@@ -8,18 +8,6 @@ public class ServerData {
     private String host;
     int port;
 
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public void setHost(String host) {
-        this.host = host;
-    }
-
-    public void setPort(int port) {
-        this.port = port;
-    }
-
     // ServerStateType serverStateType;
 
     public ServerData() {
@@ -45,6 +33,19 @@ public class ServerData {
     public int getPort() {
         return this.port;
     }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public void setHost(String host) {
+        this.host = host;
+    }
+
+    public void setPort(int port) {
+        this.port = port;
+    }
+
 
     /*
     public ServerStateType getServerStateType() {

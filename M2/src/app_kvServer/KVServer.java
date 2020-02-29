@@ -4,7 +4,6 @@ import app_kvServer.KVCache.FIFOCache;
 import app_kvServer.KVCache.IKVCache;
 import app_kvServer.KVCache.LFUCache;
 import app_kvServer.KVCache.LRUCache;
-import app_kvServer.IKVServer.ServerStateType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import logger.LogSetup;
 import org.apache.log4j.Level;
@@ -31,6 +30,7 @@ public class KVServer implements IKVServer, Runnable {
 	private int cacheSize;
 	private ServerSocket serverSocket;
 	private boolean running;
+	private boolean writeLock;
 	private ServerStateType serverStateType;
 	private IKVCache cache;
 	private KVDatabase db;
@@ -38,6 +38,7 @@ public class KVServer implements IKVServer, Runnable {
 	private BigInteger serverHash;
 	private ObjectMapper om;
 	private static final String DELETE_VAL = "null";
+
 	/**
 	 * Start KV Server at given port
 	 * @param port given port for storage server to operate
@@ -54,6 +55,7 @@ public class KVServer implements IKVServer, Runnable {
 		this.cacheSize = cacheSize;
 		this.strategy = strategy;
 		this.serverStateType = ServerStateType.STOPPED;
+		this.writeLock = false;
 		this.host = "";
 
 		try {
@@ -108,20 +110,31 @@ public class KVServer implements IKVServer, Runnable {
 		this.metaData = metaData;
 	}
 
-	public void moveData (String[] range, String server) {
+	public void moveData (String[] range, ServerData server) {
+		BigInteger start = Hash.MD5_BI(range[0]);
+		BigInteger end = Hash.MD5_BI(range[1]);
 
+		//foreach kv in db
+			//db.get()
+			// if in range
+				//send to server
+				//remove from db
+			//if not in range
+				//continue
+
+		//when done send completed msg to ecs
 	}
 
 	public void lockWrite() {
-
+		writeLock = true;
 	}
 
 	public void unlockWrite() {
-
+		writeLock = false;
 	}
 
-	public void isWriterLocked() {
-
+	public boolean isWriterLocked() {
+		return writeLock;
 	}
 
 	public boolean inServer(String key){
