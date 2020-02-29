@@ -20,6 +20,8 @@ import static shared.messages.IKVAdminMessage.ADMIN_DELIMIT;
 import static shared.messages.IKVAdminMessage.ADMIN_ID;
 import static shared.messages.KVMessage.SIMPLE_ID;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 public class KVCommModule implements Runnable {
 
 	private Logger logger = Logger.getRootLogger();
@@ -37,6 +39,7 @@ public class KVCommModule implements Runnable {
 	private String serverAddress;
 	private int serverPort;
 
+	private ObjectMapper om;
 	/**
 	 * Initialize KVCommModule with address and port of KVServer
 	 * @param socket socket for the KVServer
@@ -47,6 +50,7 @@ public class KVCommModule implements Runnable {
 		this.serverAddress = this.socket.getInetAddress().getHostAddress();
 		this.serverPort = this.socket.getLocalPort();
 		this.setRunning(true);
+		this.om = new ObjectMapper();
 		logger.info("Connection established");
 	}
 
@@ -232,8 +236,19 @@ public class KVCommModule implements Runnable {
 
 	private void sendKVSimpleMsgResponse(StatusType status, String key, String value) throws Exception {
 		switch (status) {
-
+			// TODO: check if range is correct for BOTH GET and PUT
+			/*
+			// hash key using MD5, create serverData using name,host,port
+			if (!inServer(keyHash, serverData)){
+				// TODO: AND send new metadata back as value?
+				// need to serialize metadata
+				mdString = om.writeValueAsString(this.metadata);
+				sendKVMessage(StatusType.SERVER_NOT_RESPONSIBLE, key, mdString);
+				return;
+			}
+			*/
 			case GET:
+				
 				value = server.getKV(key);
 
 				if (value == null) {

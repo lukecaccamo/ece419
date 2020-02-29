@@ -157,9 +157,11 @@ public class ECS implements IECS {
             IECSNode n = hashRing.get(firstHash);
             n.setNodeHashRange(prevHash, firstHash);
 
+            /*
             MetaData metaData = new MetaData(node.getNodeName(), node.getNodeHost(),
                     node.getNodePort(), node.getNodeHashRange()[0], node.getNodeHashRange()[1]);
             node.setMetaData(metaData);
+            */
             node.startKVServer();
         } catch (Exception e) {
             logger.error(e);
