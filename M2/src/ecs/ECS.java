@@ -213,6 +213,8 @@ public class ECS implements IECS {
         ECSNode node = null;
         try {
             node = (ECSNode) this.freeServers.remove(0);
+            node.setCacheStrategy(cacheStrategy);
+            node.setCacheSize(cacheSize);
             this.usedServers.hashRing.put(node.getHashKey(), node);
 
             this.updateRingRanges();
@@ -221,7 +223,8 @@ public class ECS implements IECS {
 
             node = node.setData(ActionType.INIT, this.zookeeper, this.usedServers);
             this.usedServers.hashRing.put(node.getHashKey(), node);
-            this.broadcast(ActionType.UPDATE);
+
+            // this.broadcast(ActionType.UPDATE);
         } catch (Exception e) {
             logger.error(e);
         }

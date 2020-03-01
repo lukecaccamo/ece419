@@ -15,6 +15,7 @@ import org.apache.log4j.Logger;
 import logger.LogSetup;
 
 import ecs.ECS;
+import ecs.ECSNode;
 import ecs.IECSNode;
 
 public class ECSClient implements IECSClient {
@@ -39,6 +40,7 @@ public class ECSClient implements IECSClient {
     }
 
     public void run() {
+        this.printHashRing();
         while (!this.stop) {
             this.stdin = new BufferedReader(new InputStreamReader(System.in));
             System.out.print(PROMPT);
@@ -85,10 +87,7 @@ public class ECSClient implements IECSClient {
                     String cacheStrategy = tokens[2];
                     int cacheSize = Integer.parseInt(tokens[3]);
                     Collection<IECSNode> nodes = this.addNodes(count, cacheStrategy, cacheSize);
-                    printInfo("HashRing:");
-                    for (Map.Entry<String, IECSNode> e : this.getNodes().entrySet()) {
-                        printInfo("\t" + e.getValue().getNodeName() + " (" + e.getValue().getNodeHashRange()[0] + ", " + e.getValue().getNodeHashRange()[1] + ")");
-                    }
+                    this.printHashRing();
                 } else {
                     printError("Invalid number of parameters!");
                 }
@@ -99,10 +98,7 @@ public class ECSClient implements IECSClient {
                     Collection<String> nodeNames = new ArrayList<>();
                     nodeNames.add(nodeName);
                     this.removeNodes(nodeNames);
-                    printInfo("HashRing:");
-                    for (Map.Entry<String, IECSNode> e : this.getNodes().entrySet()) {
-                        printInfo("\t" + e.getValue().getNodeName() + " (" + e.getValue().getNodeHashRange()[0] + ", " + e.getValue().getNodeHashRange()[1] + ")");
-                    }
+                    this.printHashRing();
                 } else {
                     printError("Invalid number of parameters!");
                 }
@@ -237,6 +233,18 @@ public class ECSClient implements IECSClient {
     @Override
     public IECSNode getNodeByKey(String Key) {
         return this.ecs.getNodeByKey(Key);
+    }
+
+    private void printHashRing() {
+        printInfo("HashRing:");
+        for (Map.Entry<String, IECSNode> e : this.getNodes().entrySet()) {
+            IECSNode node = e.getValue();
+            String str = String.format("\t%s(%s:%d) flag: %s range: (%s,%s) cache: %s(%d)",
+                    node.getNodeName(), node.getNodeHost(), node.getNodePort(),
+                    node.getFlag().toString(), node.getNodeHashRange()[0],
+                    node.getNodeHashRange()[1], node.getCacheStrategy().toString(), node.getCacheSize());
+            printInfo(str);
+        }
     }
 
     private void printHelp() {
