@@ -170,4 +170,5 @@ public class InteractionTest extends TestCase {
 			ex = e;
 		}
 	}
+
 }

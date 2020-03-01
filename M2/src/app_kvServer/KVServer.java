@@ -192,6 +192,14 @@ public class KVServer implements IKVServer, Runnable {
 		close();
 	}
 
+	public String getServerHash() {
+		return this.serverHash;
+	}
+
+	public String getHost() {
+		return this.host;
+	}
+
 	public HashRing getMetaData() {
 		return this.metaData;
 	}

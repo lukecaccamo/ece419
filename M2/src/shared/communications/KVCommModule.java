@@ -270,7 +270,6 @@ public class KVCommModule implements Runnable {
 		String value = msg.getValue();
 
 		if (!server.inServer(key)){
-			// TODO: AND send new metadata back as value?
 			// need to serialize metadata
 			String mdString = om.writeValueAsString(server.getMetaData());
 			sendKVMessage(StatusType.SERVER_NOT_RESPONSIBLE, key, mdString);
