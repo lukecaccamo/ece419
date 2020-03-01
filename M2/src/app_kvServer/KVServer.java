@@ -336,6 +336,7 @@ public class KVServer implements IKVServer, Runnable {
 	@Override
 	public void close() {
 		this.running = false;
+		this.adminCommModule.setRunning(false);
 		try {
 			// TODO: Destroy all generated threads and close connections.
 			if (this.serverSocket != null && !this.serverSocket.isClosed())

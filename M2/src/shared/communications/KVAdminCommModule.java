@@ -2,20 +2,21 @@ package shared.communications;
 
 import app_kvServer.IKVServer;
 import app_kvServer.KVServer;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import ecs.IECSNode;
+
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-
-import shared.hashring.HashRing;
-import shared.messages.KVAdminMessage;
-import shared.messages.IKVAdminMessage.ActionType;
-
 import org.apache.zookeeper.*;
 import org.apache.zookeeper.Watcher.Event.KeeperState;
 import org.apache.zookeeper.data.Stat;
 import java.util.concurrent.CountDownLatch;
+
+import ecs.ECS;
+import ecs.IECSNode;
+import shared.hashring.HashRing;
+import shared.messages.KVAdminMessage;
+import shared.messages.IKVAdminMessage.ActionType;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.core.JsonProcessingException;
 
 import java.io.IOException;
 import java.net.*;
@@ -37,16 +38,14 @@ public class KVAdminCommModule implements Runnable {
 	private boolean running;
 
 	public KVAdminCommModule(String name, String zkHost, int zkPort) {
-		this.setRunning(false);
+		this.setRunning(true);
 		this.logger.setLevel(Level.ERROR);
 		this.name = name;
 		this.zkHost = zkHost;
 		this.zkPort = zkPort;
+		this.zkNodeName = ECS.ZOOKEEPER_ADMIN_NODE_NAME + "/" + this.name;
 		this.state = new String();
 		this.om = new ObjectMapper();
-
-		String zkParentName = "/ECSAdmin";
-		this.zkNodeName = zkParentName + "/" + this.name;
 
 		try {
 			this.connected = new CountDownLatch(1);
@@ -62,7 +61,6 @@ public class KVAdminCommModule implements Runnable {
 			connected.await();
 			this.zookeeper.create(zkNodeName, null, ZooDefs.Ids.OPEN_ACL_UNSAFE,
 					CreateMode.PERSISTENT);
-			this.setRunning(true);
 		} catch (IOException | KeeperException | InterruptedException e) {
 			logger.error(e);
 		}
@@ -94,7 +92,7 @@ public class KVAdminCommModule implements Runnable {
 		switch (msg.getAction()) {
 			case INIT:
 				// this.server.initKVServer(msg.getMetaData(), node.getCacheSize(),
-				// 		node.getCacheStrategy());
+				// node.getCacheStrategy());
 				msg.setAction(ActionType.INIT_ACK);
 				break;
 			case START:
@@ -158,9 +156,8 @@ public class KVAdminCommModule implements Runnable {
 		try {
 			while (running) {
 				KVAdminMessage adminMsg = getAdminMessage();
-				if (adminMsg != null) {
+				if (adminMsg != null)
 					this.state = sendAdminMessage(adminMsg);
-				}
 			}
 		} catch (Exception e) {
 			logger.error(e);
