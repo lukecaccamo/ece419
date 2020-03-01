@@ -84,6 +84,10 @@ public class HashRing {
         return hashRing.get(key);
     }
 
+    public IECSNode getServer(String hashIndex){
+        return hashRing.get(hashIndex);
+    }
+
     // server calls this to check
     public boolean inServer(String keyHash, String serverHash){
         String potentialServer = hashRing.ceilingKey(keyHash);

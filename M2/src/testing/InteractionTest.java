@@ -169,6 +169,8 @@ public class InteractionTest extends TestCase {
 		} catch (Exception e) {
 			ex = e;
 		}
+
+		assertNotNull(ex);
 	}
 
 }

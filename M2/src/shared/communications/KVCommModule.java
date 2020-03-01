@@ -313,7 +313,7 @@ public class KVCommModule implements Runnable {
 		//TODO: send response to ecs when complete
 
 		HashRing metaData = server.getMetaData();
-		IECSNode node = metaData.serverLookup(msg.getHashKey());
+		IECSNode node = metaData.getServer(msg.getHashKey());
 
 		switch (msg.getAction()) {
 			case INIT:
