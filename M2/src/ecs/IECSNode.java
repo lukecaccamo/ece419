@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import shared.hashring.HashRing;
 
-@JsonSerialize(as=ECSNode.class)
+@JsonSerialize(as = ECSNode.class)
 @JsonDeserialize(as = ECSNode.class)
 public interface IECSNode {
     public enum IECSNodeFlag {
