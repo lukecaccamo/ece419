@@ -35,6 +35,10 @@ public class KVServer implements IKVServer, Runnable {
 	private String name;
 	private String zkHost;
 	private int zkPort;
+	private String zkNodeName;
+	private ZooKeeper zookeeper;
+	private CountDownLatch connected;
+	private String state;
 
 	private String host;
 	private int port;
@@ -50,9 +54,6 @@ public class KVServer implements IKVServer, Runnable {
 	private String serverHash;
 	private ObjectMapper om;
 	private static final String DELETE_VAL = "null";
-
-	private ZooKeeper zookeeper;
-	private CountDownLatch connected;
 
 	/**
 	 * Start KV Server at given port
@@ -107,6 +108,7 @@ public class KVServer implements IKVServer, Runnable {
 		this.name = name;
 		this.zkHost = zkHost;
 		this.zkPort = zkPort;
+		this.state = new String();
 
 		this.port = port;
 		this.cacheSize = cacheSize;
@@ -127,16 +129,22 @@ public class KVServer implements IKVServer, Runnable {
 
 		assignCache(strategy);
 
-		initializeZooKeeper();
-
 		db = new KVDatabase(this.port);
+
+		initializeZooKeeper();
+		KVAdminMessage adminMsg = getAdminMessage();
+		while (adminMsg == null){
+			adminMsg = getAdminMessage();
+		}
+		this.state = sendKVAdminMsgResponse(adminMsg);
+
 		new Thread(this).start();
 	}
 
 	// M2
 	private void initializeZooKeeper() {
 		String zkParentName = "/ECSAdmin";
-		String zkNodeName = zkParentName + "/" + this.name;
+		this.zkNodeName = zkParentName + "/" + this.name;
 
 		try {
 			this.connected = new CountDownLatch(1);
@@ -153,24 +161,6 @@ public class KVServer implements IKVServer, Runnable {
 			this.zookeeper.create(zkNodeName, null, ZooDefs.Ids.OPEN_ACL_UNSAFE,
 					CreateMode.PERSISTENT);
 		} catch (IOException | KeeperException | InterruptedException e) {
-			logger.error(e);
-		}
-
-		try {
-			Stat zkStat = null;
-			byte[] jsonBytes = null;
-			while (jsonBytes == null) {
-				zkStat = zookeeper.exists(zkNodeName, false);
-				jsonBytes = this.zookeeper.getData(zkNodeName, null, zkStat);
-			}
-			String json = new String(jsonBytes);
-			KVAdminMessage response = this.om.readValue(json, KVAdminMessage.class);
-			response.setAction(ActionType.INIT_ACK);
-
-			json = this.om.writeValueAsString(response);
-			jsonBytes = KVCommModule.toByteArray(json);
-			zookeeper.setData(zkNodeName, jsonBytes, zkStat.getVersion());
-		} catch (JsonProcessingException | KeeperException | InterruptedException e) {
 			logger.error(e);
 		}
 	}
@@ -358,6 +348,91 @@ public class KVServer implements IKVServer, Runnable {
 		db.clear();
 	}
 
+	private KVAdminMessage getAdminMessage() {
+		try {
+			Stat zkStat = zookeeper.exists(zkNodeName, false);
+			byte[] jsonBytes = this.zookeeper.getData(zkNodeName, null, zkStat);
+
+			if (jsonBytes == null) return null;
+
+			String json = new String(jsonBytes);
+			if (!this.state.equals(json)) {
+				return this.om.readValue(json, KVAdminMessage.class);
+			}
+			return null;
+		} catch (JsonProcessingException | KeeperException | InterruptedException e) {
+			logger.error(e);
+		}
+		return null;
+	}
+
+	private String sendKVAdminMsgResponse(KVAdminMessage msg) {
+		// TODO: send response to ecs when complete
+		HashRing metaData = msg.getMetaData();
+		IECSNode node = metaData.getHashRing().get(msg.getHashKey());
+
+		switch (msg.getAction()) {
+			case INIT:
+				this.initKVServer(msg.getMetaData(), node.getCacheSize(),
+						node.getCacheStrategy());
+				msg.setAction(ActionType.INIT_ACK);
+				break;
+			case START:
+				this.start();
+				msg.setAction(ActionType.START_ACK);
+				break;
+			case STOP:
+				this.stop();
+				msg.setAction(ActionType.STOP_ACK);
+				break;
+			case SHUTDOWN:
+				this.shutDown();
+				msg.setAction(ActionType.SHUTDOWN_ACK);
+				break;
+			case LOCK_WRITE:
+				this.lockWrite();
+				msg.setAction(ActionType.LOCK_WRITE_ACK);
+				break;
+			case UNLOCK_WRITE:
+				this.unlockWrite();
+				msg.setAction(ActionType.UNLOCK_WRITE_ACK);
+				break;
+			case IS_WRITER_LOCKED:
+				this.isWriterLocked();
+				msg.setAction(ActionType.IS_WRITER_LOCKED_ACK);
+				break;
+			case MOVE_DATA:
+				// must be range and key of newly added/removed node
+				this.moveData(node.getNodeHashRange(), msg.getHashKey());
+				msg.setAction(ActionType.MOVE_DATA_ACK);
+				break;
+			case UPDATE:
+				this.updateMetaData(msg.getMetaData());
+				msg.setAction(ActionType.UPDATE_ACK);
+				break;
+			case GET_METADATA:
+				this.getMetaData();
+				msg.setAction(ActionType.GET_METADATA_ACK);
+				break;
+			case GET_SERVER_STATE:
+				this.getServerState();
+				msg.setAction(ActionType.GET_SERVER_STATE_ACK);
+				break;
+		}
+
+		try {
+			Stat zkStat = zookeeper.exists(zkNodeName, false);
+			String json = this.om.writeValueAsString(msg);
+			byte[] jsonBytes = KVCommModule.toByteArray(json);
+			zookeeper.setData(zkNodeName, jsonBytes, zkStat.getVersion());
+			return json;
+		} catch (JsonProcessingException | KeeperException | InterruptedException e) {
+			logger.error(e);
+		}
+
+		return null;
+	}
+
 	@Override
 	public void run() {
 
@@ -366,12 +441,17 @@ public class KVServer implements IKVServer, Runnable {
 		if (this.serverSocket != null) {
 			while (isRunning()) {
 				try {
-					Socket client = this.serverSocket.accept();
-					KVCommModule connection = new KVCommModule(client, this);
-					new Thread(connection).start();
+					KVAdminMessage adminMsg = getAdminMessage();
 
-					logger.info("Connected to " + client.getInetAddress().getHostName()
+					if (adminMsg != null) {
+						this.state = sendKVAdminMsgResponse(adminMsg);
+					} else {
+						Socket client = this.serverSocket.accept();
+						KVCommModule connection = new KVCommModule(client, this);
+						new Thread(connection).start();
+						logger.info("Connected to " + client.getInetAddress().getHostName()
 							+ " on port " + client.getPort());
+					}
 				} catch (IOException e) {
 					logger.error("Error! " + "Unable to establish connection. \n", e);
 				}
