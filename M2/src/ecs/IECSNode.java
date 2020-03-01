@@ -1,7 +1,12 @@
 package ecs;
 
+import app_kvServer.IKVServer;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import shared.hashring.HashRing;
 
+@JsonSerialize(as=ECSNode.class)
+@JsonDeserialize(as = ECSNode.class)
 public interface IECSNode {
     public enum IECSNodeFlag {
         STOP, /* Node has stopped */
@@ -47,4 +52,8 @@ public interface IECSNode {
     public IECSNodeFlag getFlag();
 
     public void setFlag(IECSNodeFlag flag);
+
+    public int getCacheSize();
+
+    public IKVServer.CacheStrategy getCacheStrategy();
 }

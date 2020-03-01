@@ -12,12 +12,18 @@ public class KVAdminMessage implements Serializable, IKVAdminMessage {
 
 	private ActionType action;
 	private String hashKey;
-    private HashRing hashRing = null;
+    private HashRing metaData = null;
+
+	public KVAdminMessage() {
+		this.action = null;
+		this.hashKey = null;
+		this.metaData = null;
+	}
 
 	public KVAdminMessage(ActionType action, String hashKey, HashRing hashRing) {
 		this.action = action;
 		this.hashKey = hashKey;
-		this.hashRing = hashRing;
+		this.metaData = hashRing;
 	}
 
 	// Set
@@ -30,7 +36,7 @@ public class KVAdminMessage implements Serializable, IKVAdminMessage {
 	}
 
 	public void setMetaData(HashRing hashRing) {
-		this.hashRing = hashRing;
+		this.metaData = hashRing;
 	}
 
 
@@ -44,6 +50,6 @@ public class KVAdminMessage implements Serializable, IKVAdminMessage {
 	}
 
 	public HashRing getMetaData() {
-		return hashRing;
+		return metaData;
 	}
 }

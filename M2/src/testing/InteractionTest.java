@@ -162,7 +162,7 @@ public class InteractionTest extends TestCase {
 		meta.addServer("1", new ECSNode("name2", "host2", 1234));
 
 		KVAdminMessage msg = new KVAdminMessage(IKVAdminMessage.ActionType.START, null, null);
-		msg.setHashRing(meta);
+		msg.setMetaData(meta);
 
 		try {
 			kvClient.sendAdmin(msg);

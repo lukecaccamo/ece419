@@ -3,10 +3,12 @@ package shared.communications;
 import app_kvServer.IKVServer;
 import app_kvServer.KVServer;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import ecs.IECSNode;
 import org.apache.log4j.Logger;
 import shared.exceptions.DeleteException;
 import shared.exceptions.GetException;
 import shared.exceptions.PutException;
+import shared.hashring.HashRing;
 import shared.messages.KVAdminMessage;
 import shared.messages.KVMessage.StatusType;
 import shared.messages.KVSimpleMessage;
@@ -310,9 +312,13 @@ public class KVCommModule implements Runnable {
 
 	private void sendKVAdminMsgResponse(KVAdminMessage msg) {
 		//TODO: send response to ecs when complete
+
+		HashRing metaData = server.getMetaData();
+		IECSNode node = metaData.serverLookup(msg.getHashKey());
+
 		switch (msg.getAction()) {
 			case INIT:
-				server.initKVServer(msg.getMetaData(), msg.getCacheSize(), msg.getReplacementStrategy());
+				server.initKVServer(msg.getMetaData(), node.getCacheSize(), node.getCacheStrategy());
 				break;
 			case START:
 				server.start();
@@ -333,7 +339,8 @@ public class KVCommModule implements Runnable {
 				server.isWriterLocked();
 				break;
 			case MOVE_DATA:
-				server.moveData(msg.getRange(), msg.getServer());
+				//must be range and key of newly added/removed node
+				server.moveData(node.getNodeHashRange(), msg.getHashKey());
 				break;
 			case UPDATE:
 				server.updateMetaData(msg.getMetaData());

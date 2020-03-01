@@ -1,9 +1,7 @@
 package ecs;
 
 import app_kvServer.IKVServer.CacheStrategy;
-import shared.messages.KVAdminMessage;
 import shared.hashring.Hash;
-import shared.hashring.HashRing;
 
 import org.apache.log4j.Logger;
 
@@ -12,21 +10,33 @@ public class ECSNode implements IECSNode {
     private static String SSH_SCRIPT_PATH = M2_PATH + "/startKVServer.sh";
     private static Logger logger = Logger.getRootLogger();
 
-    private String hash;
-    private String name;
-    private String host;
-    private int port;
-    private String[] hashRange;
+    private String hashKey;
+    private String nodeName;
+    private String nodeHost;
+    private int nodePort;
+    private String[] nodeHashRange;
     private IECSNodeFlag flag;
     private int cacheSize;
     private CacheStrategy cacheStrategy;
 
-    public ECSNode(String name, String host, int port) {
-        this.hash = Hash.MD5(host + ":" + port);
-        this.name = name;
-        this.host = host;
-        this.port = port;
-        this.hashRange = new String[] {null, null};
+    public ECSNode() {
+        this.hashKey = null;
+        this.nodeName = null;
+        this.nodeHost = null;
+        this.nodePort = 0;
+        this.nodeHashRange = null;
+        this.flag = null;
+        this.cacheSize = 0;
+        this.cacheStrategy = null;
+    }
+
+
+    public ECSNode(String nodeName, String nodeHost, int nodePort) {
+        this.hashKey = Hash.MD5(nodeHost + ":" + nodePort);
+        this.nodeName = nodeName;
+        this.nodeHost = nodeHost;
+        this.nodePort = nodePort;
+        this.nodeHashRange = new String[] {null, null};
         this.flag = IECSNodeFlag.SHUT_DOWN;
         this.cacheSize = 0;
         this.cacheStrategy = CacheStrategy.None;
@@ -34,8 +44,8 @@ public class ECSNode implements IECSNode {
 
     public IECSNodeFlag startKVServer(String zkHost, int zkPort) {
         if (this.flag == IECSNodeFlag.SHUT_DOWN) {
-            String[] command = {SSH_SCRIPT_PATH, this.name, zkHost, Integer.toString(zkPort),
-                    this.host, Integer.toString(this.port), Integer.toString(this.cacheSize),
+            String[] command = {SSH_SCRIPT_PATH, this.nodeName, zkHost, Integer.toString(zkPort),
+                    this.nodeHost, Integer.toString(this.nodePort), Integer.toString(this.cacheSize),
                     this.cacheStrategy.toString()};
 
             try {
@@ -54,7 +64,7 @@ public class ECSNode implements IECSNode {
      */
     @Override
     public String getHashKey() {
-        return this.hash;
+        return this.hashKey;
     }
 
     /**
@@ -62,7 +72,7 @@ public class ECSNode implements IECSNode {
      */
     @Override
     public String getNodeName() {
-        return this.name;
+        return this.nodeName;
     }
 
     /**
@@ -70,7 +80,7 @@ public class ECSNode implements IECSNode {
      */
     @Override
     public String getNodeHost() {
-        return this.host;
+        return this.nodeHost;
     }
 
     /**
@@ -78,7 +88,7 @@ public class ECSNode implements IECSNode {
      */
     @Override
     public int getNodePort() {
-        return this.port;
+        return this.nodePort;
     }
 
     /**
@@ -87,12 +97,12 @@ public class ECSNode implements IECSNode {
      */
     @Override
     public String[] getNodeHashRange() {
-        return this.hashRange;
+        return this.nodeHashRange;
     }
 
     @Override
     public void setNodeHashRange(String from, String to) {
-        this.hashRange = new String[] {from, to};
+        this.nodeHashRange = new String[] {from, to};
     }
 
     /**
@@ -113,7 +123,17 @@ public class ECSNode implements IECSNode {
         this.cacheStrategy = cacheStrategyEnum;
     }
 
+    @Override
+    public CacheStrategy getCacheStrategy() {
+        return cacheStrategy;
+    }
+
     public void setCacheSize(int cacheSize) {
         this.cacheSize = cacheSize;
+    }
+
+    @Override
+    public int getCacheSize() {
+        return cacheSize;
     }
 }

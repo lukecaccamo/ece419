@@ -166,11 +166,11 @@ public class KVServer implements IKVServer, Runnable {
 		}
 	}
 
-	public void initKVServer(HashRing metaData, int cacheSize, String replacementStrategy) {
+	public void initKVServer(HashRing metaData, int cacheSize, CacheStrategy replacementStrategy) {
 		this.metaData = metaData;
 		this.cacheSize = cacheSize;
 		this.serverStateType = ServerStateType.STOPPED;
-		assignCache(replacementStrategy);
+		assignCache(replacementStrategy.toString());
 	}
 
 	public ServerStateType getServerState() {
@@ -200,9 +200,9 @@ public class KVServer implements IKVServer, Runnable {
 		this.metaData = metaData;
 	}
 
-	public void moveData(String[] range, IECSNode server) {
-		BigInteger start = Hash.MD5_BI(range[0]);
-		BigInteger end = Hash.MD5_BI(range[1]);
+	public void moveData(String[] range, String serverKey) {
+		String start = range[0];
+		String end = range[1];
 
 		// foreach kv in db
 		// db.get()

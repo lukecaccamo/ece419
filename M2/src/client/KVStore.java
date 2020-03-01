@@ -65,7 +65,7 @@ public class KVStore implements KVCommInterface {
 
 		// get correct server, connect to it
 		if (this.metaData != null){
-			BigInteger keyHash = Hash.MD5_BI(key);
+			String keyHash = Hash.MD5(key);
 			IECSNode responsible = this.metaData.serverLookup(keyHash);
 			disconnect();
 			this.serverAddress = responsible.getNodeHost();
@@ -99,7 +99,7 @@ public class KVStore implements KVCommInterface {
 
 		// get correct server, connect to it
 		if (this.metaData != null){
-			BigInteger keyHash = Hash.MD5_BI(key);
+			String keyHash = Hash.MD5(key);
 			IECSNode responsible = this.metaData.serverLookup(keyHash);
 			disconnect();
 			this.serverAddress = responsible.getNodeHost();
