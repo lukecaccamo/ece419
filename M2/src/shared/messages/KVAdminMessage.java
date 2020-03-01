@@ -6,7 +6,7 @@ import shared.metadata.ServerData;
 import java.io.Serializable;
 
 /**
- * Represents a KV  Admin message, which is intended to be received and sent
+ * Represents a KV Admin message, which is intended to be received and sent
  * by the ECS and the server.
  */
 public class KVAdminMessage implements Serializable, IKVAdminMessage {

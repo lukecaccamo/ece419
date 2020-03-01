@@ -20,7 +20,6 @@ import java.util.concurrent.CountDownLatch;
 import app_kvServer.IKVServer;
 import app_kvServer.IKVServer.ServerStateType;
 import ecs.IECS;
-import ecs.IECSNode.ECSNodeFlag;
 import ecs.IECSNode.IECSNodeFlag;
 import shared.metadata.Hash;
 import shared.metadata.MetaData;
@@ -111,7 +110,7 @@ public class ECS implements IECS {
         }
     }
 
-    private void initializeZooKeeperECSNode() {
+    private void initializeECSNode() {
         try {
             List<String> list = zookeeper.getChildren(ZOOKEEPER_ADMIN_NODE_NAME, false);
             for (String nodeName : list) {
@@ -178,7 +177,7 @@ public class ECS implements IECS {
         this.objectMapper = new ObjectMapper();
 
         this.initializeZooKeeper();
-        this.initializeZooKeeperECSNode();
+        this.initializeECSNode();
         this.initializeServers(configFilePath);
         this.resetZooKeeperNodes(this.servers.iterator());
 
