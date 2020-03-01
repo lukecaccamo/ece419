@@ -18,9 +18,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
 
-import static shared.messages.IKVAdminMessage.ADMIN_ID;
-import static shared.messages.KVMessage.SIMPLE_ID;
-
 public class KVCommModule implements Runnable {
 
 	private static final char LINE_FEED = 0x0A;
@@ -60,6 +57,7 @@ public class KVCommModule implements Runnable {
 	// Called by server only
 	public void run() {
 		try {
+
 			output = this.socket.getOutputStream();
 			input = this.socket.getInputStream();
 
@@ -68,23 +66,15 @@ public class KVCommModule implements Runnable {
 
 					String msg = getMessage();
 
-					if (msg.contains(SIMPLE_ID)) {
-						msg = msg.replaceFirst(SIMPLE_ID, "");
-						KVSimpleMessage simpleMessage = om.readValue(msg, KVSimpleMessage.class);
+					KVSimpleMessage simpleMessage = om.readValue(msg, KVSimpleMessage.class);
 
-						// Check if the server can respond to requests
-						if (server.getServerState() == IKVServer.ServerStateType.STOPPED) {
-							sendKVMessage(StatusType.SERVER_STOPPED, simpleMessage.getKey(), simpleMessage.getValue());
-						} else if (server.isWriterLocked() && simpleMessage.getStatus() == StatusType.PUT) {
-							sendKVMessage(StatusType.SERVER_WRITE_LOCK, simpleMessage.getKey(), null);
-						} else {
-							sendKVSimpleMsgResponse(simpleMessage);
-						}
-
-					} else if (msg.contains(ADMIN_ID)){
-						msg = msg.replaceFirst(ADMIN_ID, "");
-						KVAdminMessage adminMsg = om.readValue(msg, KVAdminMessage.class);
-						sendKVAdminMsgResponse(adminMsg);
+					// Check if the server can respond to requests
+					if (server.getServerState() == IKVServer.ServerStateType.STOPPED) {
+						sendKVMessage(StatusType.SERVER_STOPPED, simpleMessage.getKey(), simpleMessage.getValue());
+					} else if (server.isWriterLocked() && simpleMessage.getStatus() == StatusType.PUT) {
+						sendKVMessage(StatusType.SERVER_WRITE_LOCK, simpleMessage.getKey(), null);
+					} else {
+						sendKVSimpleMsgResponse(simpleMessage);
 					}
 
 					/* connection either terminated by the client or lost due to
@@ -173,7 +163,7 @@ public class KVCommModule implements Runnable {
 
 
 		KVSimpleMessage msg = new KVSimpleMessage(status, key, value);
-		String simpleMsg = SIMPLE_ID + om.writeValueAsString(msg);
+		String simpleMsg = om.writeValueAsString(msg);
 
 		byte[] msgBytes = toByteArray(simpleMsg);
 		this.output.write(msgBytes, 0, msgBytes.length);
@@ -183,7 +173,7 @@ public class KVCommModule implements Runnable {
 
 	public void sendKVAdminMessage(KVAdminMessage msg) throws IOException {
 
-		String adminMsg = ADMIN_ID + om.writeValueAsString(msg);
+		String adminMsg = om.writeValueAsString(msg);
 
 		byte[] msgBytes = toByteArray(adminMsg); //om.writeValueAsBytes(msg);
 		this.output.write(msgBytes, 0, msgBytes.length);
@@ -194,14 +184,12 @@ public class KVCommModule implements Runnable {
 	// For client
 	public KVSimpleMessage receiveKVMessage() throws IOException {
 		String msg = getMessage();
-		msg = msg.replaceFirst(SIMPLE_ID, "");
 		return om.readValue(msg, KVSimpleMessage.class);
 	}
 
 	// For use on ECS
 	public KVAdminMessage receiveKVAdminMessage() throws IOException {
 		String msg = getMessage();
-		msg = msg.replaceFirst(ADMIN_ID, "");
 		return om.readValue(msg, KVAdminMessage.class);
 	}
 
@@ -307,52 +295,6 @@ public class KVCommModule implements Runnable {
 
 				break;
 		}
-	}
-
-	private void sendKVAdminMsgResponse(KVAdminMessage msg) {
-		//TODO: send response to ecs when complete
-
-		HashRing metaData = server.getMetaData();
-		IECSNode node = metaData.getServer(msg.getHashKey());
-
-		switch (msg.getAction()) {
-			case INIT:
-				server.initKVServer(msg.getMetaData(), node.getCacheSize(), node.getCacheStrategy());
-				break;
-			case START:
-				server.start();
-				break;
-			case STOP:
-				server.stop();
-				break;
-			case SHUTDOWN:
-				server.shutDown();
-				break;
-			case LOCK_WRITE:
-				server.lockWrite();
-				break;
-			case UNLOCK_WRITE:
-				server.unlockWrite();
-				break;
-			case IS_WRITER_LOCKED:
-				server.isWriterLocked();
-				break;
-			case MOVE_DATA:
-				//must be range and key of newly added/removed node
-				server.moveData(node.getNodeHashRange(), msg.getHashKey());
-				break;
-			case UPDATE:
-				server.updateMetaData(msg.getMetaData());
-				break;
-			case GET_METADATA:
-				server.getMetaData();
-				break;
-			case GET_SERVER_STATE:
-				server.getServerState();
-				break;
-		}
-
-		return;
 	}
 
 	public static final byte[] toByteArray(String s){

@@ -28,8 +28,6 @@ public interface IKVAdminMessage {
 		GET_METADATA_ACK
 	}
 
-	public static final String ADMIN_ID = "<ADMIN>";
-
 	/**
 	 * @return the ActionType that is associated with this message
 	 */

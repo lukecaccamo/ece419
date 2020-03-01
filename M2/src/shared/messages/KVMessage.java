@@ -19,8 +19,6 @@ public interface KVMessage {
 		SERVER_NOT_RESPONSIBLE
 	}
 
-	public static final String SIMPLE_ID = "<SIMPLE>";
-
 	/**
 	 * @return the key that is associated with this message, 
 	 * 		null if not key is associated.

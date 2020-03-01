@@ -132,6 +132,7 @@ public class KVServer implements IKVServer, Runnable {
 		db = new KVDatabase(this.port);
 
 		initializeZooKeeper();
+
 		KVAdminMessage adminMsg = getAdminMessage();
 		while (adminMsg == null){
 			adminMsg = getAdminMessage();
@@ -185,9 +186,7 @@ public class KVServer implements IKVServer, Runnable {
 	}
 
 	public void shutDown() {
-		// TODO: send shutdown message
 		this.serverStateType = ServerStateType.SHUT_DOWN;
-
 		close();
 	}
 
