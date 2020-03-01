@@ -1,4 +1,4 @@
-package shared.metadata;
+package shared.hashring;
 
 import java.math.BigInteger;
 

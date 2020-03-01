@@ -1,6 +1,6 @@
 package ecs;
 
-import shared.metadata.MetaData;
+import shared.hashring.HashRing;
 
 public interface IECSNode {
     public enum IECSNodeFlag {
@@ -51,7 +51,7 @@ public interface IECSNode {
     /**
      * @return the meta data
      */
-    public MetaData getMetaData();
+    public HashRing getMetaData();
 
     public void setMetaData();
 }

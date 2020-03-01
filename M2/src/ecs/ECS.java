@@ -21,8 +21,8 @@ import app_kvServer.IKVServer;
 import app_kvServer.IKVServer.ServerStateType;
 import ecs.IECS;
 import ecs.IECSNode.IECSNodeFlag;
-import shared.metadata.Hash;
-import shared.metadata.MetaData;
+import shared.hashring.Hash;
+import shared.hashring.HashRing;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.core.JsonProcessingException;

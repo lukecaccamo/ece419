@@ -1,42 +1,44 @@
-package shared.metadata;
+package shared.hashring;
+
+import ecs.IECSNode;
 
 import java.math.BigInteger;
 import java.util.*;
 
-public class MetaData {
-    // map start index to ServerData
-    private TreeMap<BigInteger, ServerData> hashRing;
+public class HashRing {
+    // map start index to IECSNode
+    private TreeMap<BigInteger, IECSNode> hashRing;
 
-    public MetaData() {
-        this.hashRing = new TreeMap<BigInteger, ServerData>();
+    public HashRing() {
+        this.hashRing = new TreeMap<BigInteger, IECSNode>();
     }
 
     public void clear() {
         this.hashRing.clear();
     }
 
-    public TreeMap<BigInteger, ServerData> getHashRing() {
+    public TreeMap<BigInteger, IECSNode> getHashRing() {
         return hashRing;
     }
 
-    public void setHashRing(TreeMap<BigInteger, ServerData> hashRing) {
+    public void setHashRing(TreeMap<BigInteger, IECSNode> hashRing) {
         this.hashRing = hashRing;
     }
 
     // this will be called by ecs
-    public void addServer(BigInteger hashIndex, ServerData server){
+    public void addServer(BigInteger hashIndex, IECSNode server){
         hashRing.put(hashIndex, server);
     }
 
     // this will be called by ecs
-    // could probably have overloaded fn that takes in ServerData objec instead
+    // could probably have overloaded fn that takes in IECSNode objec instead
     public void removeServer(BigInteger hashIndex){
         hashRing.remove(hashIndex);
     }
 
     // this will be called by server, server has info on their own ip and port
     // maybe better to pass in server ip and port instead, better performance wise
-    public ServerData getSucc(BigInteger hashIndex){
+    public IECSNode getSucc(BigInteger hashIndex){
         // find current one, need current server start index
         BigInteger succKey = hashRing.higherKey(hashIndex);
         if (succKey == null){
@@ -53,7 +55,7 @@ public class MetaData {
         return hashRing.get(succKey);
     }
 
-    public ServerData getPred(BigInteger hashIndex){
+    public IECSNode getPred(BigInteger hashIndex){
         BigInteger predKey = hashRing.lowerKey(hashIndex);
         if (predKey == null){
             // last or only
@@ -70,7 +72,7 @@ public class MetaData {
     }
 
     // client calls this
-    public ServerData serverLookup(BigInteger hashIndex){
+    public IECSNode serverLookup(BigInteger hashIndex){
         BigInteger key = hashRing.ceilingKey(hashIndex);
         if (key == null){
             // either wrap around to first server or no servers currently

@@ -12,9 +12,9 @@ import shared.communications.KVCommModule;
 import shared.exceptions.DeleteException;
 import shared.exceptions.GetException;
 import shared.exceptions.PutException;
-import shared.metadata.Hash;
-import shared.metadata.MetaData;
-import shared.metadata.ServerData;
+import shared.hashring.Hash;
+import shared.hashring.HashRing;
+import ecs.IECSNode;
 
 import org.apache.zookeeper.*;
 import org.apache.zookeeper.Watcher.Event.KeeperState;
@@ -43,7 +43,7 @@ public class KVServer implements IKVServer, Runnable {
 	private ServerStateType serverStateType;
 	private IKVCache cache;
 	private KVDatabase db;
-	private MetaData metaData;
+	private HashRing metaData;
 	private BigInteger serverHash;
 	private ObjectMapper om;
 	private static final String DELETE_VAL = "null";
@@ -160,13 +160,13 @@ public class KVServer implements IKVServer, Runnable {
 				jsonBytes = this.zookeeper.getData(zkNodeName, false, zkStat);
 			}
 			String json = new String(jsonBytes).trim();
-			System.out.println(this.name + " recieved MetaData: " + json);
+			System.out.println(this.name + " recieved HashRing: " + json);
 		} catch (KeeperException | InterruptedException e) {
 			logger.error(e);
 		}
 	}
 
-	public void initKVServer(MetaData metaData, int cacheSize, String replacementStrategy) {
+	public void initKVServer(HashRing metaData, int cacheSize, String replacementStrategy) {
 		this.metaData = metaData;
 		this.cacheSize = cacheSize;
 		this.serverStateType = ServerStateType.STOPPED;
@@ -192,15 +192,15 @@ public class KVServer implements IKVServer, Runnable {
 		close();
 	}
 
-	public MetaData getMetaData() {
+	public HashRing getMetaData() {
 		return this.metaData;
 	}
 
-	public void updateMetaData(MetaData metaData) {
+	public void updateMetaData(HashRing metaData) {
 		this.metaData = metaData;
 	}
 
-	public void moveData(String[] range, ServerData server) {
+	public void moveData(String[] range, IECSNode server) {
 		BigInteger start = Hash.MD5_BI(range[0]);
 		BigInteger end = Hash.MD5_BI(range[1]);
 

@@ -8,8 +8,8 @@ import shared.messages.IKVAdminMessage;
 import shared.messages.KVAdminMessage;
 import shared.messages.KVMessage;
 import shared.messages.KVMessage.StatusType;
-import shared.metadata.MetaData;
-import shared.metadata.ServerData;
+import shared.hashring.HashRing;
+import ecs.ECSNode;
 
 import java.io.File;
 import java.math.BigInteger;
@@ -157,9 +157,9 @@ public class InteractionTest extends TestCase {
 		KVMessage response = null;
 		Exception ex = null;
 
-		MetaData meta = new MetaData();
-		meta.addServer(BigInteger.TEN, new ServerData("name", "host", 123));
-		meta.addServer(BigInteger.ONE, new ServerData("name2", "host2", 1234));
+		HashRing meta = new HashRing();
+		meta.addServer(BigInteger.TEN, new ECSNode("name", "host", 123));
+		meta.addServer(BigInteger.ONE, new ECSNode("name2", "host2", 1234));
 
 		KVAdminMessage msg = new KVAdminMessage(IKVAdminMessage.ActionType.START, null, null);
 		msg.setMetaData(meta);

@@ -2,8 +2,8 @@ package ecs;
 
 import app_kvServer.IKVServer.CacheStrategy;
 import shared.messages.KVAdminMessage;
-import shared.metadata.Hash;
-import shared.metadata.MetaData;
+import shared.hashring.Hash;
+import shared.hashring.HashRing;
 
 import org.apache.log4j.Logger;
 
@@ -18,7 +18,7 @@ public class ECSNode implements IECSNode {
     private int port;
     private String[] hashRange;
     private IECSNodeFlag flag;
-    private MetaData metaData;
+    private HashRing metaData;
     private int cacheSize;
     private CacheStrategy cacheStrategy;
 
@@ -114,13 +114,13 @@ public class ECSNode implements IECSNode {
      * @return the meta data
      */
     @Override
-    public MetaData getMetaData() {
+    public HashRing getMetaData() {
         return this.metaData;
     }
 
     @Override
     public void setMetaData() {
-        MetaData metaData = new MetaData();
+        HashRing metaData = new HashRing();
         this.metaData = metaData;
     }
 

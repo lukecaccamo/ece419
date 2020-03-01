@@ -1,7 +1,7 @@
 package shared.messages;
 
-import shared.metadata.MetaData;
-import shared.metadata.ServerData;
+import shared.hashring.HashRing;
+import ecs.IECSNode;
 
 import java.io.Serializable;
 
@@ -12,16 +12,16 @@ import java.io.Serializable;
 public class KVAdminMessage implements Serializable, IKVAdminMessage {
 
 	private ActionType action;
-    private MetaData metaData = null;
+    private HashRing metaData = null;
     private int cacheSize = 0;
 	private String replacementStrategy = null;
-    private ServerData server = null;
+    private IECSNode server = null;
     private String startHash = null;
     private String endHash = null;
     private String[] range = null;
 
 
-	public KVAdminMessage(ActionType action, MetaData metaData, ServerData serverData, String ... params) {
+	public KVAdminMessage(ActionType action, HashRing metaData, IECSNode serverData, String ... params) {
 		this.action = action;
 
 		if (metaData != null || params.length > 0)
@@ -33,7 +33,7 @@ public class KVAdminMessage implements Serializable, IKVAdminMessage {
 		this.action = action;
 	}
 
-	public void setMetaData(MetaData metaData) {
+	public void setMetaData(HashRing metaData) {
 		this.metaData = metaData;
 	}
 
@@ -45,7 +45,7 @@ public class KVAdminMessage implements Serializable, IKVAdminMessage {
 		this.replacementStrategy = replacementStrategy;
 	}
 
-	public void setServer(ServerData server) {
+	public void setServer(IECSNode server) {
 		this.server = server;
 	}
 
@@ -70,7 +70,7 @@ public class KVAdminMessage implements Serializable, IKVAdminMessage {
 		return action;
 	}
 
-	public MetaData getMetaData() {
+	public HashRing getMetaData() {
 		return metaData;
 	}
 
@@ -82,7 +82,7 @@ public class KVAdminMessage implements Serializable, IKVAdminMessage {
 		return replacementStrategy;
 	}
 
-	public ServerData getServer() {
+	public IECSNode getServer() {
 		return server;
 	}
 
@@ -98,7 +98,7 @@ public class KVAdminMessage implements Serializable, IKVAdminMessage {
 		return range;
 	}
 
-	private void updateParams(ActionType action, MetaData metaData, ServerData serverData, String[] params) {
+	private void updateParams(ActionType action, HashRing metaData, IECSNode serverData, String[] params) {
 
 		switch (action) {
 			case INIT:
