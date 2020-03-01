@@ -37,6 +37,7 @@ public class KVAdminCommModule implements Runnable {
 	private boolean running;
 
 	public KVAdminCommModule(String name, String zkHost, int zkPort) {
+		this.setRunning(false);
 		this.logger.setLevel(Level.ERROR);
 		this.name = name;
 		this.zkHost = zkHost;
@@ -61,11 +62,10 @@ public class KVAdminCommModule implements Runnable {
 			connected.await();
 			this.zookeeper.create(zkNodeName, null, ZooDefs.Ids.OPEN_ACL_UNSAFE,
 					CreateMode.PERSISTENT);
+			this.setRunning(true);
 		} catch (IOException | KeeperException | InterruptedException e) {
 			logger.error(e);
 		}
-
-		this.setRunning(true);
 	}
 
 	private KVAdminMessage getAdminMessage() {
@@ -81,7 +81,7 @@ public class KVAdminCommModule implements Runnable {
 				return this.om.readValue(json, KVAdminMessage.class);
 			}
 		} catch (JsonProcessingException | KeeperException | InterruptedException e) {
-			logger.error(e);
+			logger.warn(e);
 		}
 		return null;
 	}
