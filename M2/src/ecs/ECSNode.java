@@ -33,10 +33,11 @@ public class ECSNode implements IECSNode {
         this.cacheStrategy = CacheStrategy.None;
     }
 
-    public IECSNodeFlag startKVServer() {
+    public IECSNodeFlag startKVServer(String zkHost, int zkPort) {
         if (this.flag == IECSNodeFlag.SHUT_DOWN) {
-            String[] command = {SSH_SCRIPT_PATH, this.host, Integer.toString(this.port),
-                Integer.toString(this.cacheSize), this.cacheStrategy.toString()};
+            String[] command = {SSH_SCRIPT_PATH, this.name, zkHost, Integer.toString(zkPort),
+                    this.host, Integer.toString(this.port), Integer.toString(this.cacheSize),
+                    this.cacheStrategy.toString()};
 
             try {
                 ProcessBuilder kvServerProcessBuilder = new ProcessBuilder(command).inheritIO();

@@ -4,10 +4,13 @@ filename="id_rsa"
 path="$HOME/.ssh"
 username="$USER"
 
-host=$(hostname) # $1
-port=$2
-cacheSize=$3
-cacheStrategy=$4
+name=$1
+zkHost=$2
+zkPort=$3
+host=$(hostname) # $4
+port=$5
+cacheSize=$6
+cacheStrategy=$7
 
 SOURCE="${BASH_SOURCE[0]}"
 while [ -h "$SOURCE" ]; do
@@ -22,5 +25,5 @@ DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
 
 {
   ssh -n "$host" kill -9 $(lsof -t -i:"$port") &> /dev/null
-  ssh -n "$host" nohup java -jar "$DIR"/m2-server.jar "$port" "$cacheSize" "$cacheStrategy"
+  ssh -n "$host" nohup java -jar "$DIR"/m2-server.jar "$name" "$zkHost" "$zkPort" "$port" "$cacheSize" "$cacheStrategy"
 } 2> /dev/null
