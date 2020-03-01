@@ -65,32 +65,31 @@ public class ECSClient implements IECSClient {
             case "quit":
                 this.stop = true;
                 this.shutdown();
+                this.printHashRing();
                 printInfo("Stopped all server instances!");
                 break;
             case "start":
-                if (tokens.length == 1) {
-                    this.start();
-                } else {
-                    printError("Invalid number of parameters!");
-                }
+                this.start();
+                this.printHashRing();
                 break;
             case "stop":
-                if (tokens.length == 1) {
-                    this.stop();
-                } else {
-                    printError("Invalid number of parameters!");
-                }
+                this.stop();
+                this.printHashRing();
                 break;
             case "add":
-                if (tokens.length == 4) {
+                if (tokens.length == 3) {
+                    String cacheStrategy = tokens[1];
+                    int cacheSize = Integer.parseInt(tokens[2]);
+                    this.addNode(cacheStrategy, cacheSize);
+                } else if (tokens.length == 4) {
                     int count = Integer.parseInt(tokens[1]);
                     String cacheStrategy = tokens[2];
                     int cacheSize = Integer.parseInt(tokens[3]);
-                    Collection<IECSNode> nodes = this.addNodes(count, cacheStrategy, cacheSize);
-                    this.printHashRing();
+                    this.addNodes(count, cacheStrategy, cacheSize);
                 } else {
                     printError("Invalid number of parameters!");
                 }
+                this.printHashRing();
                 break;
             case "remove":
                 if (tokens.length == 2) {
@@ -98,10 +97,10 @@ public class ECSClient implements IECSClient {
                     Collection<String> nodeNames = new ArrayList<>();
                     nodeNames.add(nodeName);
                     this.removeNodes(nodeNames);
-                    this.printHashRing();
                 } else {
                     printError("Invalid number of parameters!");
                 }
+                this.printHashRing();
                 break;
             case "logLevel":
                 if (tokens.length == 2) {
@@ -242,7 +241,8 @@ public class ECSClient implements IECSClient {
             String str = String.format("\t%s(%s:%d) flag: %s range: (%s,%s) cache: %s(%d)",
                     node.getNodeName(), node.getNodeHost(), node.getNodePort(),
                     node.getFlag().toString(), node.getNodeHashRange()[0],
-                    node.getNodeHashRange()[1], node.getCacheStrategy().toString(), node.getCacheSize());
+                    node.getNodeHashRange()[1], node.getCacheStrategy().toString(),
+                    node.getCacheSize());
             printInfo(str);
         }
     }
@@ -250,27 +250,35 @@ public class ECSClient implements IECSClient {
     private void printHelp() {
         StringBuilder sb = new StringBuilder();
         sb.append(PROMPT + "\n");
+
         sb.append(PROMPT).append(ANSI_BOLD + ANSI_BLUE + "ECS CLIENT HELP (Usage):\n" + ANSI_RESET);
+
         sb.append(PROMPT).append(ANSI_BOLD + "start" + ANSI_RESET);
         sb.append(
                 "\t\t\t starts the storage service on all KVServer instances that participate \n");
+
         sb.append(PROMPT).append(ANSI_BOLD + "stop" + ANSI_RESET);
         sb.append(
                 "\t\t\t all participating KVServers are stopped for processing client requests but the processes remain running \n");
 
+        sb.append(PROMPT).append(ANSI_BOLD + "add " + ANSI_BLUE + "<strategy> <size>" + ANSI_RESET);
+        sb.append("\t choose a server from available machines and start it with cache options "
+                + ANSI_BLUE + "<strategy> " + ANSI_RESET + "and " + ANSI_BLUE + "<size> \n");
+
         sb.append(PROMPT)
-                .append(ANSI_BOLD + "add " + ANSI_BLUE + "<n> <size> <strategy>" + ANSI_RESET);
-        sb.append("\t choose " + ANSI_BLUE + "<n> " + ANSI_RESET
+                .append(ANSI_BOLD + "add " + ANSI_BLUE + "<m> <strategy> <size>" + ANSI_RESET);
+        sb.append("\t choose " + ANSI_BLUE + "<m> " + ANSI_RESET
                 + "servers from available machines and start them with cache options " + ANSI_BLUE
-                + "<size> " + ANSI_RESET + "and " + ANSI_BLUE + "<strategy> \n");
+                + "<strategy> " + ANSI_RESET + "and " + ANSI_BLUE + "<size> \n");
+
         sb.append(PROMPT).append(ANSI_BOLD + "remove " + ANSI_BLUE + "<name>" + ANSI_RESET);
         sb.append("\t\t remove a server from the storage service with name " + ANSI_BLUE + "<name>"
                 + ANSI_RESET + "\n");
 
         sb.append(PROMPT).append(ANSI_BOLD + "logLevel" + ANSI_RESET);
-        sb.append("\t\t\t changes the logLevel \n");
+        sb.append("\t\t\t changes the logLevel: \n");
         sb.append(PROMPT).append("\t\t\t\t ");
-        sb.append("ALL | DEBUG | INFO | WARN | ERROR | FATAL | OFF \n");
+        sb.append(ANSI_BLUE + "ALL | DEBUG | INFO | WARN | ERROR | FATAL | OFF \n" + ANSI_RESET);
 
         sb.append(PROMPT).append(ANSI_BOLD + "quit " + ANSI_RESET);
         sb.append("\t\t\t exits the program \n");
