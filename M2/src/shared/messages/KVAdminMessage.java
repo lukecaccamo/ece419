@@ -1,7 +1,6 @@
 package shared.messages;
 
 import shared.hashring.HashRing;
-import ecs.IECSNode;
 
 import java.io.Serializable;
 
@@ -12,20 +11,13 @@ import java.io.Serializable;
 public class KVAdminMessage implements Serializable, IKVAdminMessage {
 
 	private ActionType action;
-    private HashRing metaData = null;
-    private int cacheSize = 0;
-	private String replacementStrategy = null;
-    private IECSNode server = null;
-    private String startHash = null;
-    private String endHash = null;
-    private String[] range = null;
+	private String hashKey;
+    private HashRing hashRing = null;
 
-
-	public KVAdminMessage(ActionType action, HashRing metaData, IECSNode serverData, String ... params) {
+	public KVAdminMessage(ActionType action, String hashKey, HashRing hashRing) {
 		this.action = action;
-
-		if (metaData != null || params.length > 0)
-			updateParams(action, metaData, serverData, params);
+		this.hashKey = hashKey;
+		this.hashRing = hashRing;
 	}
 
 	// Set
@@ -33,90 +25,25 @@ public class KVAdminMessage implements Serializable, IKVAdminMessage {
 		this.action = action;
 	}
 
-	public void setMetaData(HashRing metaData) {
-		this.metaData = metaData;
+	public void setHashKey(String hashKey) {
+		this.hashKey = hashKey;
 	}
 
-	public void setCacheSize(int cacheSize) {
-		this.cacheSize = cacheSize;
-	}
-
-	public void setReplacementStrategy(String replacementStrategy) {
-		this.replacementStrategy = replacementStrategy;
-	}
-
-	public void setServer(IECSNode server) {
-		this.server = server;
-	}
-
-	public void setRange(String[] range) {
-		this.range = range;
-	}
-
-	public void setStartHash(String startHash) {
-		this.startHash = startHash;
-		range = new String[] {startHash, this.endHash};
-	}
-
-	public void setEndHash(String endHash) {
-		this.endHash = endHash;
-		range = new String[] {this.startHash, endHash};
+	public void setMetaData(HashRing hashRing) {
+		this.hashRing = hashRing;
 	}
 
 
 	// Get
-	@Override
 	public ActionType getAction() {
 		return action;
 	}
 
+	public String getHashKey() {
+		return hashKey;
+	}
+
 	public HashRing getMetaData() {
-		return metaData;
-	}
-
-	public int getCacheSize() {
-		return cacheSize;
-	}
-
-	public String getReplacementStrategy() {
-		return replacementStrategy;
-	}
-
-	public IECSNode getServer() {
-		return server;
-	}
-
-	public String getStartHash() {
-		return startHash;
-	}
-
-	public String getEndHash() {
-		return endHash;
-	}
-
-	public String [] getRange() {
-		return range;
-	}
-
-	private void updateParams(ActionType action, HashRing metaData, IECSNode serverData, String[] params) {
-
-		switch (action) {
-			case INIT:
-				this.metaData = metaData;
-				cacheSize = Integer.getInteger(params[0]);
-				replacementStrategy = params[1];
-				break;
-			case MOVE_DATA:
-				startHash = params[0];
-				endHash = params[1];
-				server = serverData;
-				range = new String[] {params[0], params[1]};
-				break;
-			case UPDATE:
-				this.metaData = metaData;
-				break;
-			default:
-				break;
-		}
+		return hashRing;
 	}
 }

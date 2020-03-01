@@ -44,7 +44,7 @@ public class KVServer implements IKVServer, Runnable {
 	private IKVCache cache;
 	private KVDatabase db;
 	private HashRing metaData;
-	private BigInteger serverHash;
+	private String serverHash;
 	private ObjectMapper om;
 	private static final String DELETE_VAL = "null";
 
@@ -76,7 +76,7 @@ public class KVServer implements IKVServer, Runnable {
 			e.printStackTrace();
 		}
 
-		this.serverHash = Hash.MD5_BI(this.host + ":" + this.port);
+		this.serverHash = Hash.MD5(this.host + ":" + this.port);
 		this.om = new ObjectMapper();
 
 		assignCache(strategy);
@@ -119,7 +119,7 @@ public class KVServer implements IKVServer, Runnable {
 			e.printStackTrace();
 		}
 
-		this.serverHash = Hash.MD5_BI(this.host + ":" + this.port);
+		this.serverHash = Hash.MD5(this.host + ":" + this.port);
 		this.om = new ObjectMapper();
 
 		assignCache(strategy);
@@ -160,7 +160,7 @@ public class KVServer implements IKVServer, Runnable {
 				jsonBytes = this.zookeeper.getData(zkNodeName, false, zkStat);
 			}
 			String json = new String(jsonBytes).trim();
-			System.out.println(this.name + " recieved HashRing: " + json);
+			System.out.println(this.name + " recieved data: " + json);
 		} catch (KeeperException | InterruptedException e) {
 			logger.error(e);
 		}
@@ -228,7 +228,7 @@ public class KVServer implements IKVServer, Runnable {
 	}
 
 	public boolean inServer(String key) {
-		BigInteger keyHash = Hash.MD5_BI(key);
+		String keyHash = Hash.MD5(key);
 		return this.metaData.inServer(keyHash, this.serverHash);
 	}
 

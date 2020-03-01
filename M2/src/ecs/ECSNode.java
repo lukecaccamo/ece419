@@ -18,7 +18,6 @@ public class ECSNode implements IECSNode {
     private int port;
     private String[] hashRange;
     private IECSNodeFlag flag;
-    private HashRing metaData;
     private int cacheSize;
     private CacheStrategy cacheStrategy;
 
@@ -29,7 +28,6 @@ public class ECSNode implements IECSNode {
         this.port = port;
         this.hashRange = new String[] {null, null};
         this.flag = IECSNodeFlag.SHUT_DOWN;
-        this.metaData = null;
         this.cacheSize = 0;
         this.cacheStrategy = CacheStrategy.None;
     }
@@ -108,20 +106,6 @@ public class ECSNode implements IECSNode {
     @Override
     public void setFlag(IECSNodeFlag flag) {
         this.flag = flag;
-    }
-
-    /**
-     * @return the meta data
-     */
-    @Override
-    public HashRing getMetaData() {
-        return this.metaData;
-    }
-
-    @Override
-    public void setMetaData() {
-        HashRing metaData = new HashRing();
-        this.metaData = metaData;
     }
 
     public void setCacheStrategy(String cacheStrategy) {

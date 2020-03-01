@@ -158,11 +158,11 @@ public class InteractionTest extends TestCase {
 		Exception ex = null;
 
 		HashRing meta = new HashRing();
-		meta.addServer(BigInteger.TEN, new ECSNode("name", "host", 123));
-		meta.addServer(BigInteger.ONE, new ECSNode("name2", "host2", 1234));
+		meta.addServer("A", new ECSNode("name", "host", 123));
+		meta.addServer("1", new ECSNode("name2", "host2", 1234));
 
 		KVAdminMessage msg = new KVAdminMessage(IKVAdminMessage.ActionType.START, null, null);
-		msg.setMetaData(meta);
+		msg.setHashRing(meta);
 
 		try {
 			kvClient.sendAdmin(msg);

@@ -47,11 +47,4 @@ public interface IECSNode {
     public IECSNodeFlag getFlag();
 
     public void setFlag(IECSNodeFlag flag);
-
-    /**
-     * @return the meta data
-     */
-    public HashRing getMetaData();
-
-    public void setMetaData();
 }
