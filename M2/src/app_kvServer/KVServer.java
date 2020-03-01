@@ -5,6 +5,7 @@ import app_kvServer.KVCache.IKVCache;
 import app_kvServer.KVCache.LFUCache;
 import app_kvServer.KVCache.LRUCache;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import logger.LogSetup;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
@@ -14,6 +15,8 @@ import shared.exceptions.GetException;
 import shared.exceptions.PutException;
 import shared.hashring.Hash;
 import shared.hashring.HashRing;
+import shared.messages.KVAdminMessage;
+import shared.messages.IKVAdminMessage.ActionType;
 import ecs.IECSNode;
 
 import org.apache.zookeeper.*;
@@ -154,14 +157,20 @@ public class KVServer implements IKVServer, Runnable {
 		}
 
 		try {
+			Stat zkStat = null;
 			byte[] jsonBytes = null;
 			while (jsonBytes == null) {
-				Stat zkStat = this.zookeeper.exists(zkNodeName, false);
-				jsonBytes = this.zookeeper.getData(zkNodeName, false, zkStat);
+				zkStat = zookeeper.exists(zkNodeName, false);
+				jsonBytes = this.zookeeper.getData(zkNodeName, null, zkStat);
 			}
-			String json = new String(jsonBytes).trim();
-			System.out.println(this.name + " recieved data: " + json);
-		} catch (KeeperException | InterruptedException e) {
+			String json = new String(jsonBytes);
+			KVAdminMessage response = this.om.readValue(json, KVAdminMessage.class);
+			response.setAction(ActionType.INIT_ACK);
+
+			json = this.om.writeValueAsString(response);
+			jsonBytes = KVCommModule.toByteArray(json);
+			zookeeper.setData(zkNodeName, jsonBytes, zkStat.getVersion());
+		} catch (JsonProcessingException | KeeperException | InterruptedException e) {
 			logger.error(e);
 		}
 	}

@@ -74,31 +74,33 @@ public class ECSNode implements IECSNode {
         return true;
     }
 
-    public ECSNode send(ActionType action, ZooKeeper zookeeper, HashRing hashRing) {
+    public ECSNode setData(ActionType action, ZooKeeper zookeeper, HashRing hashRing) {
         try {
             String zkNodeName = ECS.ZOOKEEPER_ADMIN_NODE_NAME + "/" + this.getNodeName();
-            Stat zkStat = zookeeper.exists(zkNodeName, true);
+            Stat zkStat = zookeeper.exists(zkNodeName, false);
             KVAdminMessage adminMessage = new KVAdminMessage(action, this.getHashKey(), hashRing);
-            String jsonMetaData = this.objectMapper.writeValueAsString(adminMessage);
-            zookeeper.setData(zkNodeName, KVCommModule.toByteArray(jsonMetaData),
-                    zkStat.getVersion());
-            return this.recieve(zookeeper);
+            String jsonMetaData = this.objectMapper.writeValueAsString(adminMessage).trim();
+            byte[] jsonBytes = KVCommModule.toByteArray(jsonMetaData);
+            zookeeper.setData(zkNodeName, jsonBytes, zkStat.getVersion());
+            return this.await(jsonMetaData, zookeeper);
         } catch (JsonProcessingException | KeeperException | InterruptedException e) {
-            e.printStackTrace();
+            logger.error(e);
         }
         return null;
     }
 
-    private ECSNode recieve(ZooKeeper zookeeper) {
+    private ECSNode await(String oldState, ZooKeeper zookeeper) {
         try {
             String zkNodeName = ECS.ZOOKEEPER_ADMIN_NODE_NAME + "/" + this.getNodeName();
-            byte[] jsonBytes = null;
-            while (jsonBytes == null) {
-				jsonBytes = zookeeper.getData(zkNodeName, false, null);
-			}
-            return this.objectMapper.readValue(new String(jsonBytes), ECSNode.class);
+            String newState = oldState;
+            while (oldState.equals(newState)){
+                Stat zkStat = zookeeper.exists(zkNodeName, false);
+                newState = new String(zookeeper.getData(zkNodeName, false, zkStat)).trim();
+            }
+            KVAdminMessage adminMessage = this.objectMapper.readValue(newState, KVAdminMessage.class);
+            return (ECSNode) adminMessage.getMetaData().hashRing.get(this.getHashKey());
         } catch (JsonProcessingException | KeeperException | InterruptedException e) {
-            e.printStackTrace();
+            logger.error(e);
         }
         return null;
     }

@@ -130,7 +130,12 @@ public class ECS implements IECS {
         while (it.hasNext()) {
             Map.Entry<String, IECSNode> e = it.next();
             ECSNode node = (ECSNode) e.getValue();
-            ECSNode response = node.send(action, this.zookeeper, this.usedServers);
+            node = node.setData(action, this.zookeeper, this.usedServers);
+            e.setValue(node);
+            if (node.getFlag() == IECSNodeFlag.SHUT_DOWN) {
+                this.freeServers.add(node);
+                it.remove();
+            }
         }
         return true;
     }
@@ -214,7 +219,8 @@ public class ECS implements IECS {
             node.startKVServer(ZOOKEEPER_HOST, ZOOKEEPER_PORT);
             awaitNodes(1, 3000);
 
-            node.send(ActionType.INIT, this.zookeeper, this.usedServers);
+            node = node.setData(ActionType.INIT, this.zookeeper, this.usedServers);
+            this.usedServers.hashRing.put(node.getHashKey(), node);
             this.broadcast(ActionType.UPDATE);
         } catch (Exception e) {
             logger.error(e);
@@ -308,7 +314,7 @@ public class ECS implements IECS {
                 Map.Entry<String, IECSNode> e = it.next();
                 ECSNode node = (ECSNode) e.getValue();
                 if (node.getNodeName().equals(name)) {
-                    node.send(ActionType.SHUTDOWN, this.zookeeper, this.usedServers);
+                    node = node.setData(ActionType.SHUTDOWN, this.zookeeper, this.usedServers);
                     this.freeServers.add(node);
                     it.remove();
                 }
