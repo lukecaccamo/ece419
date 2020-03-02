@@ -4,6 +4,10 @@ import app_kvServer.KVCache.FIFOCache;
 import app_kvServer.KVCache.IKVCache;
 import app_kvServer.KVCache.LFUCache;
 import app_kvServer.KVCache.LRUCache;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import ecs.IECSNode;
 import logger.LogSetup;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
@@ -14,9 +18,12 @@ import shared.exceptions.GetException;
 import shared.exceptions.PutException;
 import shared.hashring.Hash;
 import shared.hashring.HashRing;
+import shared.messages.KVMessage;
+import shared.messages.KVSimpleMessage;
 
 import java.io.IOException;
 import java.net.*;
+import java.util.HashMap;
 
 public class KVServer implements IKVServer, Runnable {
 
@@ -38,7 +45,9 @@ public class KVServer implements IKVServer, Runnable {
 	private KVDatabase db;
 	private HashRing metaData;
 	private String serverHash;
+	private ObjectMapper om;
 	private static final String DELETE_VAL = "null";
+	private KVCommModule serverConnection;
 
 	private KVAdminCommModule adminCommModule;
 
@@ -68,6 +77,7 @@ public class KVServer implements IKVServer, Runnable {
 		}
 
 		this.serverHash = Hash.MD5(this.host + ":" + this.port);
+		this.om = new ObjectMapper();
 
 		assignCache(strategy);
 
@@ -89,6 +99,7 @@ public class KVServer implements IKVServer, Runnable {
 	 */
 	public KVServer(String name, String zkHost, int zkPort, int port, int cacheSize,
 			String strategy) {
+
 		this.logger.setLevel(Level.ERROR);
 		this.name = name;
 		this.zkHost = zkHost;
@@ -109,6 +120,7 @@ public class KVServer implements IKVServer, Runnable {
 		}
 
 		this.serverHash = Hash.MD5(this.host + ":" + this.port);
+		this.om = new ObjectMapper();
 
 		assignCache(strategy);
 
@@ -165,19 +177,48 @@ public class KVServer implements IKVServer, Runnable {
 		this.metaData = metaData;
 	}
 
-	public void moveData(String[] range, String serverKey) {
-		String start = range[0];
-		String end = range[1];
+	private void connectToServer(String serverAddress, int serverPort) throws Exception{
+		Socket socket = new Socket(serverAddress, serverPort);
+		this.serverConnection = new KVCommModule(socket, null);
+		this.serverConnection.connect();
+	}
 
-		// foreach kv in db
-		// db.get()
-		// if in range
-		// send to server
-		// remove from db
-		// if not in range
-		// continue
+	private void disconnectFromServer(){
+		this.serverConnection.disconnect();
+	}
 
-		// when done send completed msg to ecs
+	public void moveData(String[] range, String serverKey) throws Exception {
+		HashMap<String, String> movingData = db.moveData(range);
+		String dataJSON = "";
+		try {
+			dataJSON = om.writeValueAsString(movingData);
+		} catch (JsonProcessingException e) {
+			e.printStackTrace();
+		}
+
+		IECSNode dest = this.metaData.getServer(serverKey);
+		// connect to other server, send dataJSON as value
+		connectToServer(dest.getNodeHost(), dest.getNodePort());
+
+		this.serverConnection.sendKVMessage(KVMessage.StatusType.MOVE_VALUES, range[0], dataJSON);
+
+		KVSimpleMessage returnMsg = this.serverConnection.receiveKVMessage();
+		if (returnMsg.getStatus() == KVMessage.StatusType.MOVE_VALUES_DONE) {
+			db.deleteMovedData(movingData);
+			// TOOD: SEND MESSAGE TO ECS THAT IT'S DONE TRANSFERRING
+		}
+		// receive msg from server that its done, delete data in movingData
+		disconnectFromServer();
+	}
+
+	public void receiveData (String newDataJSON){
+		HashMap<String, String> newData = null;
+		try {
+			newData = om.readValue(newDataJSON, HashMap.class);
+		} catch (JsonProcessingException e) {
+			e.printStackTrace();
+		}
+		db.receiveData(newData);
 	}
 
 	public void lockWrite() {

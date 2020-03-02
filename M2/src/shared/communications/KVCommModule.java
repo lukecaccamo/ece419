@@ -256,17 +256,17 @@ public class KVCommModule implements Runnable {
 	private void sendKVSimpleMsgResponse(KVSimpleMessage msg) throws Exception {
 		StatusType status = msg.getStatus();
 		String key = msg.getKey();
+		String keyHash = Hash.MD5(key);
 		String value = msg.getValue();
-
-		if (!server.inServer(key)){
-			// need to serialize metadata
-			String mdString = om.writeValueAsString(server.getMetaData());
-			sendKVMessage(StatusType.SERVER_NOT_RESPONSIBLE, key, mdString);
-			return;
-		}
 
 		switch (status) {
 			case GET:
+				if (!server.inServer(keyHash)){
+					// need to serialize metadata
+					String mdString = om.writeValueAsString(server.getMetaData());
+					sendKVMessage(StatusType.SERVER_NOT_RESPONSIBLE, key, mdString);
+					return;
+				}
 
 				value = server.getKV(key);
 
@@ -279,6 +279,13 @@ public class KVCommModule implements Runnable {
 				break;
 
 			case PUT:
+				//System.out.println("in put");
+				if (!server.inServer(keyHash)){
+					// need to serialize metadata
+					String mdString = om.writeValueAsString(server.getMetaData());
+					sendKVMessage(StatusType.SERVER_NOT_RESPONSIBLE, key, mdString);
+					return;
+				}
 
 				status = StatusType.PUT_SUCCESS;
 
@@ -295,6 +302,12 @@ public class KVCommModule implements Runnable {
 				sendKVMessage(status, key, value);
 
 				break;
+
+			case MOVE_VALUES:
+
+				server.receiveData(value);
+				sendKVMessage(StatusType.MOVE_VALUES_DONE, key, "");
+
 		}
 	}
 

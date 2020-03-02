@@ -126,7 +126,11 @@ public class KVAdminCommModule implements Runnable {
 				break;
 			case MOVE_DATA:
 				// must be range and key of newly added/removed node
-				this.server.moveData(node.getNodeHashRange(), msg.getHashKey());
+				try {
+					this.server.moveData(node.getNodeHashRange(), msg.getHashKey());
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
 				msg.setAction(ActionType.MOVE_DATA_ACK);
 				break;
 			case UPDATE:

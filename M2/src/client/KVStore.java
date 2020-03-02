@@ -56,6 +56,7 @@ public class KVStore implements KVCommInterface {
 		StatusType returnMsgStatus = StatusType.SERVER_NOT_RESPONSIBLE;
 		KVSimpleMessage returnMsg = null;
 		while(returnMsgStatus == StatusType.SERVER_NOT_RESPONSIBLE) {
+			//System.out.println("Here");
 
 			if (key.length() > MAX_KEY || key.isEmpty())
 				return new KVSimpleMessage(StatusType.PUT_ERROR, "Key cannot be greater than 20 bytes or empty", null);
@@ -79,9 +80,12 @@ public class KVStore implements KVCommInterface {
 
 			this.communications.sendKVMessage(StatusType.PUT, key, value);
 
+			//System.out.println("Waiting");
 			returnMsg = this.communications.receiveKVMessage();
+			//System.out.println("Got message");
 			returnMsgStatus = returnMsg.getStatus();
 			if (returnMsgStatus == StatusType.SERVER_NOT_RESPONSIBLE) {
+				//System.out.println("new metadata");
 				try {
 					this.metaData = this.om.readValue(returnMsg.getValue(), HashRing.class);
 				} catch (JsonProcessingException e) {
@@ -162,6 +166,7 @@ public class KVStore implements KVCommInterface {
 
 			returnMsg = this.communications.receiveKVMessage();
 			returnMsgStatus = returnMsg.getStatus();
+			//System.out.println(returnMsgStatus);
 			if (returnMsgStatus == StatusType.SERVER_NOT_RESPONSIBLE) {
 				//System.out.println("Not Responsible");
 				try {

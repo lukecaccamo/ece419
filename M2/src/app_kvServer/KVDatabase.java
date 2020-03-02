@@ -1,6 +1,8 @@
 package app_kvServer;
 
 import org.apache.log4j.Logger;
+import shared.hashring.Hash;
+import shared.hashring.HashComparator;
 
 import java.io.*;
 import java.sql.*;
@@ -26,6 +28,7 @@ public class KVDatabase {
     //byte for valid, 4 bytes per lengths (ints)
     private Integer entryLength = 1 + 4 + 4 + 20 + 128000;
     private HashMap<String, Integer> index;
+    private HashComparator hc;
 
     public KVDatabase(int port) {
         // Map<String, Long> index = new HashMap<String, long>();
@@ -34,6 +37,7 @@ public class KVDatabase {
         indexFile = this.port + indexFile;
         initDB();
         index = loadIndex();
+        hc = new HashComparator();
     }
 
     public void initDB(){
@@ -192,6 +196,50 @@ public class KVDatabase {
         initDB();
         index = loadIndex();
 
+    }
+
+    public HashMap<String, String> moveData(String[] range){
+        String start = range[0];
+        String end = range[1];
+
+        HashMap<String, String> movingData = new HashMap<String, String>();
+
+        for (Map.Entry<String, Integer> entry : index.entrySet()) {
+            String key = entry.getKey();
+            String keyHash = Hash.MD5(key);
+            if(hc.compare(keyHash, start) >= 0 && hc.compare(keyHash, end) <= 0){
+                Integer startIndex = entry.getValue();
+                //find in actual db file
+                String value = "";
+                try {
+                    value = getValue(startIndex);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                movingData.put(key, value);
+            }
+        }
+        return movingData;
+    }
+
+    public void deleteMovedData(HashMap<String, String> movedData){
+        for (Map.Entry<String, String> entry : movedData.entrySet()) {
+            // don't really need to delete from db, as long as index is deleted
+            index.remove(entry.getKey());
+        }
+        saveIndex();
+    }
+
+    public void receiveData(HashMap<String, String> newData){
+
+        for (Map.Entry<String, String> entry : newData.entrySet()) {
+            try {
+                writeKV(-1, entry.getKey(), entry.getValue());
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        saveIndex();
     }
 
 }
