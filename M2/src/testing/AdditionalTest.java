@@ -131,7 +131,7 @@ public class AdditionalTest extends TestCase {
 		assertTrue(ex == null && storedValue == value);
 
 		kvServer.clearCache();
-		kvServer.close();
+		kvServer.kill();
 		kvServer = null;
 		storedValue = null;
 		System.gc();

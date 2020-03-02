@@ -65,8 +65,8 @@ public class MultipleServersTest extends TestCase {
 
     public void tearDown() {
         kvClient.disconnect();
-        kvServer1.close();
-        kvServer2.close();
+        kvServer1.kill();
+        kvServer2.kill();
         reset();
     }
 
@@ -139,28 +139,6 @@ public class MultipleServersTest extends TestCase {
 
     @Test
     public void testMoveData() throws InterruptedException {
-        port1 = 50501;
-        port2 = port1 + 1000;
-        kvServer1 = new KVServer(port1, CACHE_SIZE, POLICY);
-        kvServer2 = new KVServer(port2, CACHE_SIZE, POLICY);
-        //initially connect to first port
-        kvClient = new KVStore(kvServer1.getHost(), port1);
-
-        kvServer1.start();
-        kvServer2.start();
-
-        metaData = new HashRing();
-        node1 = new ECSNode("Server1", kvServer1.getHost(), port1);
-        node2 = new ECSNode("Server2", kvServer2.getHost(), port2);
-
-        serverHash1 = kvServer1.getServerHash();
-        serverHash2 = kvServer2.getServerHash();
-        System.out.println("Server1 Hash: " + serverHash1);
-        System.out.println("Server2 Hash: " + serverHash2);
-        metaData.addServer(serverHash1, node1);
-        metaData.addServer(serverHash2, node2);
-        kvServer1.updateMetaData(metaData);
-        kvServer2.updateMetaData(metaData);
 
         try {
             kvClient.connect();
@@ -173,7 +151,7 @@ public class MultipleServersTest extends TestCase {
         // put 100 keys into server 1--just large enough so that at least some will get in
         int i = 0;
         for (i = 0; i < 20; i++){
-            System.out.println("in loop1");
+            //System.out.println("in loop1");
             try {
                 kvClient.put(key + String.valueOf(i), value + String.valueOf(i));
             } catch (Exception e) {
@@ -181,7 +159,7 @@ public class MultipleServersTest extends TestCase {
             }
         }
 
-        String[] range = {"1c41f9b7f0f9695cfcb3ecd834edb663", "Ff8f9d88b844073909018adbae53f5fd"};
+        String[] range = {"0", "ffffffffffffffffffffffffffffffff"};
         //String[] range = {serverHash1, serverHash2}
         try {
             kvServer1.moveData(range, serverHash2);
@@ -191,13 +169,23 @@ public class MultipleServersTest extends TestCase {
 
         for (i = 0; i < 20; i++){
             try {
-                System.out.println("in loop2");
+                //System.out.println("in loop2");
                 String s2value = kvServer2.getKV(key + String.valueOf(i));
                 assertEquals(value + String.valueOf(i), s2value);
             } catch (Exception e) {
                 e.printStackTrace();
             }
         }
+
+        try {
+            System.out.println("in loop3");
+            String s2value = kvServer1.getKV("key0");
+            assertNull(s2value);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        tearDown();
 
     }
 }

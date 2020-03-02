@@ -261,7 +261,7 @@ public class KVCommModule implements Runnable {
 
 		switch (status) {
 			case GET:
-				if (!server.inServer(keyHash)){
+				if (!server.inServer(key)){
 					// need to serialize metadata
 					String mdString = om.writeValueAsString(server.getMetaData());
 					sendKVMessage(StatusType.SERVER_NOT_RESPONSIBLE, key, mdString);
@@ -280,7 +280,7 @@ public class KVCommModule implements Runnable {
 
 			case PUT:
 				//System.out.println("in put");
-				if (!server.inServer(keyHash)){
+				if (!server.inServer(key)){
 					// need to serialize metadata
 					String mdString = om.writeValueAsString(server.getMetaData());
 					sendKVMessage(StatusType.SERVER_NOT_RESPONSIBLE, key, mdString);
