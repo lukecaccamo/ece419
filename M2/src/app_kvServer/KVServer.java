@@ -127,7 +127,6 @@ public class KVServer implements IKVServer, Runnable {
 		db = new KVDatabase(this.port);
 
 		this.adminCommModule = new KVAdminCommModule(name, zkHost, zkPort, this);
-		new Thread(this.adminCommModule).start();
 
 		new Thread(this).start();
 	}
@@ -352,6 +351,8 @@ public class KVServer implements IKVServer, Runnable {
 
 		running = initializeServer();
 
+		new Thread(this.adminCommModule).start();
+
 		if (this.serverSocket != null) {
 			try {
 				while (isRunning()) {
@@ -372,7 +373,6 @@ public class KVServer implements IKVServer, Runnable {
 
 	@Override
 	public void kill() {
-		this.close();
 		try {
 			if (this.serverSocket != null && !this.serverSocket.isClosed())
 				this.serverSocket.close();
@@ -384,7 +384,8 @@ public class KVServer implements IKVServer, Runnable {
 	@Override
 	public void close() {
 		this.running = false;
-		this.adminCommModule.setRunning(false);
+		if(this.adminCommModule != null)
+			this.adminCommModule.setRunning(false);
 	}
 
 	private boolean isRunning() {
