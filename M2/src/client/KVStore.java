@@ -53,11 +53,9 @@ public class KVStore implements KVCommInterface {
 
 	@Override
 	public KVSimpleMessage put(String key, String value) throws Exception {
-
-		StatusType returnMsgStatus = null;
+		StatusType returnMsgStatus = StatusType.SERVER_NOT_RESPONSIBLE;
 		KVSimpleMessage returnMsg = null;
-
-		//while(returnMsgStatus == StatusType.SERVER_NOT_RESPONSIBLE) {
+		while(returnMsgStatus == StatusType.SERVER_NOT_RESPONSIBLE) {
 			//System.out.println("Here");
 
 			if (key.length() > MAX_KEY || key.isEmpty())
@@ -69,6 +67,16 @@ public class KVStore implements KVCommInterface {
 			if (value.length() > MAX_VALUE)
 				return new KVSimpleMessage(StatusType.PUT_ERROR, "Value cannot be greater than 120 kilobytes", null);
 
+			// get correct server, connect to it
+			if (this.metaData != null) {
+				//System.out.println("Reconnect");
+				String keyHash = Hash.MD5(key);
+				IECSNode responsible = this.metaData.serverLookup(keyHash);
+				disconnect();
+				this.serverAddress = responsible.getNodeHost();
+				this.serverPort = responsible.getNodePort();
+				connect();
+			}
 
 			this.communications.sendKVMessage(StatusType.PUT, key, value);
 
@@ -77,35 +85,16 @@ public class KVStore implements KVCommInterface {
 			//System.out.println("Got message");
 			returnMsgStatus = returnMsg.getStatus();
 			if (returnMsgStatus == StatusType.SERVER_NOT_RESPONSIBLE) {
-				// get correct server, connect to it
-				//if (this.metaData != null) {
-					//System.out.println("Reconnect");
-
-				//}
-
 				//System.out.println("new metadata");
 				try {
-
 					this.metaData = this.om.readValue(returnMsg.getValue(), HashRing.class);
-
-					String keyHash = Hash.MD5(key);
-					IECSNode responsible = this.metaData.serverLookup(keyHash);
-					disconnect();
-					this.serverAddress = responsible.getNodeHost();
-					this.serverPort = responsible.getNodePort();
-					connect();
-
-					this.communications.sendKVMessage(StatusType.PUT, key, value);
-					returnMsg = this.communications.receiveKVMessage();
-
-
 				} catch (JsonProcessingException e) {
 					e.printStackTrace();
 				}
 				// set value to say metadata instead of the entire serialization
-				//returnMsg.setValue("new metadata received");
+				returnMsg.setValue("new metadata received");
 			}
-		//}
+		}
 		return returnMsg;
 	}
 

@@ -6,6 +6,7 @@ import org.junit.Test;
 
 import client.KVStore;
 import junit.framework.TestCase;
+import shared.hashring.Hash;
 import shared.messages.IKVAdminMessage;
 import shared.messages.KVAdminMessage;
 import shared.messages.KVMessage;
@@ -37,6 +38,7 @@ public class MultipleServersTest extends TestCase {
         kvServer1 = new KVServer(port1, CACHE_SIZE, POLICY);
         kvServer2 = new KVServer(port2, CACHE_SIZE, POLICY);
         //initially connect to first port
+        kvClient = new KVStore("localhost", 50501);
 
         kvServer1.start();
         kvServer2.start();
@@ -62,7 +64,7 @@ public class MultipleServersTest extends TestCase {
     }
 
     public void tearDown() {
-        //kvClient.disconnect();
+        kvClient.disconnect();
         kvServer1.kill();
         kvServer2.kill();
         reset();
@@ -84,9 +86,16 @@ public class MultipleServersTest extends TestCase {
     }
 
     @Test
-    public void testSwitchToResponsibleServer() throws InterruptedException {
+    public void testResponsibleServers() throws InterruptedException {
 
-        kvClient = new KVStore("localhost", 50501);
+        // convert serverhashes to big int, get keys that would go into each server
+        BigInteger sh1 = new BigInteger(serverHash1, 32);
+        BigInteger sh2 = new BigInteger(serverHash2, 32);
+
+        String keyHash1 = (sh1.subtract(BigInteger.ONE)).toString(32);
+        System.out.println("keyHash1: " + keyHash1);
+        String keyHash2 = (sh2.subtract(BigInteger.ONE)).toString(32);
+        System.out.println("keyHash2: " + keyHash2);
 
         try {
             kvClient.connect();
@@ -104,37 +113,32 @@ public class MultipleServersTest extends TestCase {
         assertEquals(port2, kvClient.getServerPort());
         assertNotNull(kvClient.getMetaData());
 
-        kvClient.disconnect();
-    }
-
-    public void testNoServerSwitch() throws InterruptedException {
-
-        kvClient = new KVStore("localhost", 50502);
-
+        // after receiving metadata, it'll always return server not responsible
+        // bc actual hash is different than hash that we provide the function
+        /*
         try {
-            kvClient.connect();
-        } catch (Exception e) {
-        }
-
-        try {
-            //2071e5eb7fd74592bcfacb3e9ecc4bd1
-            kvClient.put("ehh", "value2");
+            kvClient.put(keyHash1, "key1", "value1");
         } catch (Exception e) {
             e.printStackTrace();
         }
 
-        // client's connection should be to server 2 now
-        assertEquals(port2, kvClient.getServerPort());
-        assertNull(kvClient.getMetaData());
+        assertEquals(port1, kvClient.getServerPort());
 
-        kvClient.disconnect();
 
+        try {
+            kvSimpleMessage = kvClient.get(keyHash2, "key2");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        assertEquals("value2", kvSimpleMessage.getValue());*/
+        kvServer1.clearStorage();;
+        kvServer2.clearStorage();
+        tearDown();
     }
 
     @Test
     public void testMoveData() throws InterruptedException {
-
-        kvClient = new KVStore("localhost", 50501);
 
         try {
             kvClient.connect();
@@ -181,8 +185,7 @@ public class MultipleServersTest extends TestCase {
             e.printStackTrace();
         }
 
-        kvServer1.clearStorage();
-        kvServer2.clearStorage();
+        tearDown();
 
     }
 }
