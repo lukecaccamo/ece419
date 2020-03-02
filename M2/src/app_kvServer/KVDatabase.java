@@ -30,12 +30,14 @@ public class KVDatabase {
     public KVDatabase(int port) {
         // Map<String, Long> index = new HashMap<String, long>();
         this.port = port;
+        databaseFile = port + databaseFile;
+        indexFile = this.port + indexFile;
         initDB();
         index = loadIndex();
     }
 
     public void initDB(){
-        File database = new File(this.port + databaseFile);
+        File database = new File(databaseFile);
         if (!database.exists()){
             try {
                 database.createNewFile();

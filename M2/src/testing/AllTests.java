@@ -1,13 +1,16 @@
 package testing;
 
 import java.io.IOException;
+import java.math.BigInteger;
 
+import ecs.ECSNode;
 import org.apache.log4j.Level;
 
 import app_kvServer.KVServer;
 import junit.framework.Test;
 import junit.framework.TestSuite;
 import logger.LogSetup;
+import shared.hashring.HashRing;
 
 
 public class AllTests {
@@ -15,7 +18,17 @@ public class AllTests {
 	static {
 		try {
 			new LogSetup("logs/testing/test.log", Level.ERROR);
-			new KVServer(50000, 10, "FIFO");
+			KVServer server = new KVServer(50000, 10, "FIFO");
+			server.start();
+
+			HashRing metaData = new HashRing();
+			ECSNode node = new ECSNode("Server1", server.getHost(), server.getPort());
+
+			String serverHash = server.getServerHash();
+
+			metaData.addServer(serverHash, node);
+			server.updateMetaData(metaData);
+
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -27,6 +40,7 @@ public class AllTests {
 		clientSuite.addTestSuite(ConnectionTest.class);
 		clientSuite.addTestSuite(InteractionTest.class); 
 		clientSuite.addTestSuite(AdditionalTest.class); 
+		clientSuite.addTestSuite(MultipleServersTest.class);
 		return clientSuite;
 	}
 	

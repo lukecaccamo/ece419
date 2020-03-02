@@ -27,15 +27,17 @@ public class AdditionalTest extends TestCase {
 
 	public void tearDown() {
 		kvClient.disconnect();
-
+		reset();
 	}
 
 	public void reset() {
-		File file = new File("databaseFile.db");
-		file.delete();
+		for (int i = 0; i < 4; i++) {
+			File file = new File((50000 + i) + "databaseFile.db");
+			file.delete();
 
-		file = new File("index.txt");
-		file.delete();
+			file = new File((50000+ i) + "index.txt");
+			file.delete();
+		}
 	}
 	
 	// TODO: add your test cases, at least 3
@@ -129,15 +131,12 @@ public class AdditionalTest extends TestCase {
 		assertTrue(ex == null && storedValue == value);
 
 		kvServer.clearCache();
-		kvServer.kill();
+		kvServer.close();
 		kvServer = null;
 		storedValue = null;
 		System.gc();
 
-		kvServer = new KVServer(50002, 10, "FIFO");
-
-		File file = new File("databaseFile.db");
-		//System.out.println(file.exists());
+		kvServer = new KVServer(50001, 10, "FIFO");
 
 		try {
 			storedValue = kvServer.getKV(key);

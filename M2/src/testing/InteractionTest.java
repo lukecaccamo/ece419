@@ -32,10 +32,11 @@ public class InteractionTest extends TestCase {
 	}
 
 	public void reset() {
-		File file = new File("databaseFile.db");
+
+		File file = new File(50000 + "databaseFile.db");
 		file.delete();
 
-		file = new File("index.txt");
+		file = new File(50000 + "index.txt");
 		file.delete();
 	}
 	
@@ -54,7 +55,8 @@ public class InteractionTest extends TestCase {
 			ex = e;
 		}
 
-		assertTrue(ex == null && response.getStatus() == StatusType.PUT_SUCCESS);
+		assertNull(ex);
+		assertEquals(StatusType.PUT_SUCCESS, response.getStatus());
 	}
 	
 	@Test
@@ -92,8 +94,9 @@ public class InteractionTest extends TestCase {
 			ex = e;
 		}
 
-		assertTrue(ex == null && response.getStatus() == StatusType.PUT_UPDATE
-				&& response.getValue().equals(updatedValue));
+		assertNull(ex);
+		assertEquals(StatusType.PUT_UPDATE, response.getStatus());
+		assertEquals(updatedValue, response.getValue());
 	}
 	
 	@Test
@@ -113,7 +116,8 @@ public class InteractionTest extends TestCase {
 			ex = e;
 		}
 
-		assertTrue(ex == null && response.getStatus() == StatusType.DELETE_SUCCESS);
+		assertNull(ex);
+		assertEquals(StatusType.DELETE_SUCCESS, response.getStatus());
 	}
 	
 	@Test
@@ -131,7 +135,8 @@ public class InteractionTest extends TestCase {
 				ex = e;
 			}
 		
-		assertTrue(ex == null && response.getValue().equals("bar"));
+		assertNull(ex);
+		assertEquals("bar", response.getValue());
 	}
 
 	@Test
@@ -147,30 +152,7 @@ public class InteractionTest extends TestCase {
 			ex = e;
 		}
 
-		assertTrue(ex == null && response.getStatus() == StatusType.GET_ERROR);
+		assertNull(ex);
+		assertEquals(StatusType.GET_ERROR, response.getStatus());
 	}
-
-	@Test
-	public void testSerializeAdminMsg() {
-		reset();
-		String key = "an unset value";
-		KVMessage response = null;
-		Exception ex = null;
-
-		HashRing meta = new HashRing();
-		meta.addServer("A", new ECSNode("name", "host", 123));
-		meta.addServer("1", new ECSNode("name2", "host2", 1234));
-
-		KVAdminMessage msg = new KVAdminMessage(IKVAdminMessage.ActionType.START, null, null);
-		msg.setMetaData(meta);
-
-		try {
-			kvClient.sendAdmin(msg);
-		} catch (Exception e) {
-			ex = e;
-		}
-
-		assertNotNull(ex);
-	}
-
 }

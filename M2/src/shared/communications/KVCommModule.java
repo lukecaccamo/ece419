@@ -8,6 +8,7 @@ import org.apache.log4j.Logger;
 import shared.exceptions.DeleteException;
 import shared.exceptions.GetException;
 import shared.exceptions.PutException;
+import shared.hashring.Hash;
 import shared.hashring.HashRing;
 import shared.messages.KVAdminMessage;
 import shared.messages.KVMessage.StatusType;

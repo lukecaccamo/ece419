@@ -144,6 +144,11 @@ public class KVServer implements IKVServer, Runnable {
 		close();
 	}
 
+	// shit code for dirty testing
+	public void setServerHash(String serverHash) {
+		this.serverHash = serverHash;
+	}
+
 	public String getServerHash() {
 		return this.serverHash;
 	}
