@@ -73,18 +73,22 @@ public class ECS implements IECS {
 
     private void initializeECSNode() {
         try {
-            List<String> list = zookeeper.getChildren(ZOOKEEPER_ADMIN_NODE_NAME, false);
-            for (String nodeName : list) {
-                zookeeper.delete(ZOOKEEPER_ADMIN_NODE_NAME + "/" + nodeName, -1);
+            if (zookeeper != null && zookeeper.exists(ZOOKEEPER_ADMIN_NODE_NAME, false) != null) {
+                List<String> list = zookeeper.getChildren(ZOOKEEPER_ADMIN_NODE_NAME, false);
+                for (String nodeName : list) {
+                    zookeeper.delete(ZOOKEEPER_ADMIN_NODE_NAME + "/" + nodeName, -1);
+                }
+                zookeeper.delete(ZOOKEEPER_ADMIN_NODE_NAME, -1);
             }
-            zookeeper.delete(ZOOKEEPER_ADMIN_NODE_NAME, -1);
         } catch (KeeperException | InterruptedException e) {
             logger.info(e);
         }
 
         try {
-            this.zookeeper.create(ZOOKEEPER_ADMIN_NODE_NAME, new byte[0],
-                    ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+            if (zookeeper != null) {
+                this.zookeeper.create(ZOOKEEPER_ADMIN_NODE_NAME, new byte[0],
+                        ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+            }
         } catch (KeeperException | InterruptedException e) {
             logger.error(e);
         }
@@ -264,6 +268,8 @@ public class ECS implements IECS {
     public Collection<IECSNode> setupNodes(int count, String cacheStrategy, int cacheSize) {
         ArrayList<IECSNode> nodes = new ArrayList<>();
         for (int i = 0; i < count; i++) {
+            if (this.freeServers.size() == 0)
+                break;
             ECSNode node = (ECSNode) this.freeServers.remove(0);
             node.setCacheStrategy(cacheStrategy);
             node.setCacheSize(cacheSize);
