@@ -12,6 +12,7 @@ import java.util.concurrent.CountDownLatch;
 
 import ecs.ECS;
 import ecs.IECSNode;
+import ecs.IECSNode.IECSNodeFlag;
 import shared.hashring.HashRing;
 import shared.messages.KVAdminMessage;
 import shared.messages.IKVAdminMessage.ActionType;
@@ -37,12 +38,14 @@ public class KVAdminCommModule implements Runnable {
 	private KVServer server;
 	private boolean running;
 
-	public KVAdminCommModule(String name, String zkHost, int zkPort) {
+	public KVAdminCommModule(String name, String zkHost, int zkPort, KVServer server) {
 		this.setRunning(true);
 		this.logger.setLevel(Level.ERROR);
 		this.name = name;
 		this.zkHost = zkHost;
 		this.zkPort = zkPort;
+		this.server = server;
+
 		this.zkNodeName = ECS.ZOOKEEPER_ADMIN_NODE_NAME + "/" + this.name;
 		this.state = new String();
 		this.om = new ObjectMapper();
@@ -74,7 +77,7 @@ public class KVAdminCommModule implements Runnable {
 			if (jsonBytes == null)
 				return null;
 
-			String json = new String(jsonBytes);
+			String json = new String(jsonBytes).trim();
 			if (!this.state.equals(json)) {
 				return this.om.readValue(json, KVAdminMessage.class);
 			}
@@ -91,16 +94,18 @@ public class KVAdminCommModule implements Runnable {
 
 		switch (msg.getAction()) {
 			case INIT:
-				// this.server.initKVServer(msg.getMetaData(), node.getCacheSize(),
-				// node.getCacheStrategy());
+				this.server.initKVServer(msg.getMetaData(), node.getCacheSize(),
+				node.getCacheStrategy());
 				msg.setAction(ActionType.INIT_ACK);
 				break;
 			case START:
 				this.server.start();
+				node.setFlag(IECSNodeFlag.START);
 				msg.setAction(ActionType.START_ACK);
 				break;
 			case STOP:
 				this.server.stop();
+				node.setFlag(IECSNodeFlag.STOP);
 				msg.setAction(ActionType.STOP_ACK);
 				break;
 			case SHUTDOWN:
@@ -140,12 +145,13 @@ public class KVAdminCommModule implements Runnable {
 
 		try {
 			Stat zkStat = zookeeper.exists(zkNodeName, false);
-			String json = this.om.writeValueAsString(msg);
+			String json = this.om.writeValueAsString(msg).trim();
 			byte[] jsonBytes = KVCommModule.toByteArray(json);
 			zookeeper.setData(zkNodeName, jsonBytes, zkStat.getVersion());
 			return json;
 		} catch (JsonProcessingException | KeeperException | InterruptedException e) {
 			logger.error(e);
+			e.printStackTrace();
 		}
 
 		return null;

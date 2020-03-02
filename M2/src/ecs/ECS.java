@@ -71,6 +71,25 @@ public class ECS implements IECS {
         }
     }
 
+    private void initializeECSNode() {
+        try {
+            List<String> list = zookeeper.getChildren(ZOOKEEPER_ADMIN_NODE_NAME, false);
+            for (String nodeName : list) {
+                zookeeper.delete(ZOOKEEPER_ADMIN_NODE_NAME + "/" + nodeName, -1);
+            }
+            zookeeper.delete(ZOOKEEPER_ADMIN_NODE_NAME, -1);
+        } catch (KeeperException | InterruptedException e) {
+            logger.info(e);
+        }
+
+        try {
+            this.zookeeper.create(ZOOKEEPER_ADMIN_NODE_NAME, new byte[0],
+                    ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+        } catch (KeeperException | InterruptedException e) {
+            logger.error(e);
+        }
+    }
+
     private void initializeServers(String configFilePath) {
         try {
             InputStream configFile = new FileInputStream(configFilePath);
@@ -98,29 +117,10 @@ public class ECS implements IECS {
                     if (zookeeper.exists(zkNodeName, true) != null)
                         zookeeper.delete(zkNodeName, -1);
                 } catch (KeeperException e) {
-                    logger.error(e);
+                    logger.info(e);
                 }
             }
-        } catch (InterruptedException e) {
-            logger.error(e);
-        }
-    }
-
-    private void initializeECSNode() {
-        try {
-            List<String> list = zookeeper.getChildren(ZOOKEEPER_ADMIN_NODE_NAME, false);
-            for (String nodeName : list) {
-                zookeeper.delete(ZOOKEEPER_ADMIN_NODE_NAME + "/" + nodeName, -1);
-            }
-            zookeeper.delete(ZOOKEEPER_ADMIN_NODE_NAME, -1);
-        } catch (KeeperException | InterruptedException e) {
-            logger.info("Cleared all nodes associated with " + ZOOKEEPER_ADMIN_NODE_NAME);
-        }
-
-        try {
-            this.zookeeper.create(ZOOKEEPER_ADMIN_NODE_NAME, new byte[0],
-                    ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
-        } catch (KeeperException | InterruptedException e) {
+        } catch (Exception e) {
             logger.error(e);
         }
     }
@@ -132,6 +132,7 @@ public class ECS implements IECS {
             ECSNode node = (ECSNode) e.getValue();
             node = node.setData(action, this.zookeeper, this.usedServers);
             e.setValue(node);
+
             if (node.getFlag() == IECSNodeFlag.SHUT_DOWN) {
                 this.freeServers.add(node);
                 it.remove();
@@ -224,7 +225,7 @@ public class ECS implements IECS {
             node = node.setData(ActionType.INIT, this.zookeeper, this.usedServers);
             this.usedServers.hashRing.put(node.getHashKey(), node);
 
-            // this.broadcast(ActionType.UPDATE);
+            this.broadcast(ActionType.UPDATE);
         } catch (Exception e) {
             logger.error(e);
         }

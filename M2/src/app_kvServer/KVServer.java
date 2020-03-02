@@ -114,7 +114,7 @@ public class KVServer implements IKVServer, Runnable {
 
 		db = new KVDatabase(this.port);
 
-		this.adminCommModule = new KVAdminCommModule(name, zkHost, zkPort);
+		this.adminCommModule = new KVAdminCommModule(name, zkHost, zkPort, this);
 		new Thread(this.adminCommModule).start();
 
 		new Thread(this).start();
