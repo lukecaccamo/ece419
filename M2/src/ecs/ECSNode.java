@@ -9,6 +9,7 @@ import shared.messages.IKVAdminMessage.ActionType;
 import shared.communications.KVCommModule;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import org.apache.log4j.Logger;
 import org.apache.zookeeper.*;
@@ -183,6 +184,7 @@ public class ECSNode implements IECSNode {
         return cacheSize;
     }
 
+    @JsonIgnore
     public ECSNode getServer() {
         return this;
     }

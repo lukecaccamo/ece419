@@ -73,19 +73,19 @@ public class ECS implements IECS {
 
     private void initializeECSNode() {
         try {
-            if (zookeeper != null && zookeeper.exists(ZOOKEEPER_ADMIN_NODE_NAME, false) != null) {
-                List<String> list = zookeeper.getChildren(ZOOKEEPER_ADMIN_NODE_NAME, false);
+            if (this.zookeeper != null && this.zookeeper.exists(ZOOKEEPER_ADMIN_NODE_NAME, false) != null) {
+                List<String> list = this.zookeeper.getChildren(ZOOKEEPER_ADMIN_NODE_NAME, false);
                 for (String nodeName : list) {
-                    zookeeper.delete(ZOOKEEPER_ADMIN_NODE_NAME + "/" + nodeName, -1);
+                    this.zookeeper.delete(ZOOKEEPER_ADMIN_NODE_NAME + "/" + nodeName, -1);
                 }
-                zookeeper.delete(ZOOKEEPER_ADMIN_NODE_NAME, -1);
+                this.zookeeper.delete(ZOOKEEPER_ADMIN_NODE_NAME, -1);
             }
         } catch (KeeperException | InterruptedException e) {
             logger.info(e);
         }
 
         try {
-            if (zookeeper != null) {
+            if (this.zookeeper != null) {
                 this.zookeeper.create(ZOOKEEPER_ADMIN_NODE_NAME, new byte[0],
                         ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
             }
@@ -118,8 +118,8 @@ public class ECS implements IECS {
                 IECSNode node = (ECSNode) nodes.next();
                 String zkNodeName = "/" + node.getNodeName();
                 try {
-                    if (zookeeper.exists(zkNodeName, true) != null)
-                        zookeeper.delete(zkNodeName, -1);
+                    if (this.zookeeper.exists(zkNodeName, true) != null)
+                        this.zookeeper.delete(zkNodeName, -1);
                 } catch (KeeperException e) {
                     logger.info(e);
                 }
