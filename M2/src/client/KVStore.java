@@ -145,10 +145,4 @@ public class KVStore implements KVCommInterface {
 	public HashRing getMetaData() {
 		return this.metaData;
 	}
-
-	public void sendAdmin(KVAdminMessage msg) throws Exception {
-
-		this.communications.sendKVAdminMessage(msg);
-	}
-
 }

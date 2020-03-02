@@ -172,16 +172,6 @@ public class KVCommModule implements Runnable {
 		logger.info("Send simple message:\t '" + msg.getMsg() + "'");
     }
 
-	public void sendKVAdminMessage(KVAdminMessage msg) throws IOException {
-
-		String adminMsg = om.writeValueAsString(msg);
-
-		byte[] msgBytes = toByteArray(adminMsg); //om.writeValueAsBytes(msg);
-		this.output.write(msgBytes, 0, msgBytes.length);
-		this.output.flush();
-		logger.info("Send admin message:\t '" + adminMsg + "'");
-	}
-
 	// For client
 	public KVSimpleMessage receiveKVMessage() throws IOException {
 		String msg = getMessage();
