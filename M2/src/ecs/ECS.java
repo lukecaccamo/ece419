@@ -41,8 +41,8 @@ public class ECS implements IECS {
     private static int DEFAULT_CACHE_SIZE = 1;
 
     private Properties properties;
-    private ArrayList<IECSNode> freeServers;
-    private HashRing usedServers;
+    public ArrayList<IECSNode> freeServers;
+    public HashRing usedServers;
 
     private ZooKeeper zookeeper;
     private CountDownLatch connected;
@@ -142,17 +142,19 @@ public class ECS implements IECS {
     }
 
     private void updateRingRanges() {
-        String prevHash = null;
-        for (Map.Entry<String, IECSNode> entry : this.usedServers.hashRing.entrySet()) {
-            if (prevHash != null) {
-                IECSNode n = entry.getValue();
-                n.setNodeHashRange(prevHash, entry.getKey());
+        if (this.usedServers.hashRing.size() > 0) {
+            String prevHash = null;
+            for (Map.Entry<String, IECSNode> entry : this.usedServers.hashRing.entrySet()) {
+                if (prevHash != null) {
+                    IECSNode n = entry.getValue();
+                    n.setNodeHashRange(prevHash, entry.getKey());
+                }
+                prevHash = entry.getKey();
             }
-            prevHash = entry.getKey();
+            String firstHash = this.usedServers.hashRing.firstKey();
+            IECSNode n = this.usedServers.hashRing.get(firstHash);
+            n.setNodeHashRange(prevHash, firstHash);
         }
-        String firstHash = this.usedServers.hashRing.firstKey();
-        IECSNode n = this.usedServers.hashRing.get(firstHash);
-        n.setNodeHashRange(prevHash, firstHash);
     }
 
     public ECS(String configFilePath) {

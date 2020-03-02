@@ -11,6 +11,7 @@ import org.apache.zookeeper.data.Stat;
 import java.util.concurrent.CountDownLatch;
 
 import ecs.ECS;
+import ecs.ECSNode;
 import ecs.IECSNode;
 import ecs.IECSNode.IECSNodeFlag;
 import shared.hashring.HashRing;
@@ -89,6 +90,7 @@ public class KVAdminCommModule implements Runnable {
 
 	private String sendAdminMessage(KVAdminMessage msg) {
 		// TODO: send response to ecs when complete
+		String key = msg.getHashKey();
 		HashRing metaData = msg.getMetaData();
 		IECSNode node = metaData.getHashRing().get(msg.getHashKey());
 
@@ -109,8 +111,12 @@ public class KVAdminCommModule implements Runnable {
 				msg.setAction(ActionType.STOP_ACK);
 				break;
 			case SHUTDOWN:
-				this.server.shutDown();
+				node = new ECSNode(node.getNodeName(), node.getNodeHost(), node.getNodePort());
+				metaData.removeServer(key);
+				metaData.addServer(key, node);
+				msg.setMetaData(metaData);
 				msg.setAction(ActionType.SHUTDOWN_ACK);
+				this.server.shutDown();
 				break;
 			case LOCK_WRITE:
 				this.server.lockWrite();
@@ -163,16 +169,10 @@ public class KVAdminCommModule implements Runnable {
 
 	// Called by server only
 	public void run() {
-		try {
-			while (running) {
-				KVAdminMessage adminMsg = getAdminMessage();
-				if (adminMsg != null)
-					this.state = sendAdminMessage(adminMsg);
-			}
-		} catch (Exception e) {
-			logger.error(e);
-		} finally {
-			// TODO
+		while (isRunning()) {
+			KVAdminMessage adminMsg = getAdminMessage();
+			if (adminMsg != null)
+				this.state = sendAdminMessage(adminMsg);
 		}
 	}
 
@@ -180,7 +180,7 @@ public class KVAdminCommModule implements Runnable {
 		return this.running;
 	}
 
-	public void setRunning(boolean run) {
-		this.running = run;
+	public void setRunning(boolean running) {
+		this.running = running;
 	}
 }

@@ -23,6 +23,7 @@ public class ECSClient implements IECSClient {
     public static final String ANSI_RESET = "\u001B[0m";
     public static final String ANSI_CYAN = "\u001B[36m";
     public static final String ANSI_BLUE = "\u001B[34m";
+    public static final String ANSI_PURPLE = "\u001B[35m";
     public static final String ANSI_RED = "\u001B[31m";
     public static final String ANSI_WHITE = "\u001B[37m";
     private static final String PROMPT =
@@ -40,7 +41,8 @@ public class ECSClient implements IECSClient {
     }
 
     public void run() {
-        this.printHashRing();
+        this.printUsedServers();
+        this.printFreeServers();
         while (!this.stop) {
             this.stdin = new BufferedReader(new InputStreamReader(System.in));
             System.out.print(PROMPT);
@@ -65,16 +67,19 @@ public class ECSClient implements IECSClient {
             case "quit":
                 this.stop = true;
                 this.shutdown();
-                this.printHashRing();
+                this.printUsedServers();
+                this.printFreeServers();
                 printInfo("Stopped all server instances!");
                 break;
             case "start":
                 this.start();
-                this.printHashRing();
+                this.printUsedServers();
+                this.printFreeServers();
                 break;
             case "stop":
                 this.stop();
-                this.printHashRing();
+                this.printUsedServers();
+                this.printFreeServers();
                 break;
             case "add":
                 if (tokens.length == 3) {
@@ -89,7 +94,8 @@ public class ECSClient implements IECSClient {
                 } else {
                     printError("Invalid number of parameters!");
                 }
-                this.printHashRing();
+                this.printUsedServers();
+                this.printFreeServers();
                 break;
             case "remove":
                 if (tokens.length == 2) {
@@ -100,7 +106,8 @@ public class ECSClient implements IECSClient {
                 } else {
                     printError("Invalid number of parameters!");
                 }
-                this.printHashRing();
+                this.printUsedServers();
+                this.printFreeServers();
                 break;
             case "logLevel":
                 if (tokens.length == 2) {
@@ -234,8 +241,8 @@ public class ECSClient implements IECSClient {
         return this.ecs.getNodeByKey(Key);
     }
 
-    private void printHashRing() {
-        printInfo("HashRing:");
+    private void printUsedServers() {
+        printInfo("UsedServers:");
         for (Map.Entry<String, IECSNode> e : this.getNodes().entrySet()) {
             IECSNode node = e.getValue();
             String str = String.format("\t%s(%s:%d) flag: %s range: (%s,%s) cache: %s(%d)",
@@ -244,6 +251,18 @@ public class ECSClient implements IECSClient {
                     node.getNodeHashRange()[1], node.getCacheStrategy().toString(),
                     node.getCacheSize());
             printInfo(str);
+        }
+    }
+
+    private void printFreeServers() {
+        printInfoSecondary("FreeServers:");
+        for (IECSNode node : this.ecs.freeServers) {
+            String str = String.format("\t%s(%s:%d) flag: %s range: (%s,%s) cache: %s(%d)",
+                    node.getNodeName(), node.getNodeHost(), node.getNodePort(),
+                    node.getFlag().toString(), node.getNodeHashRange()[0],
+                    node.getNodeHashRange()[1], node.getCacheStrategy().toString(),
+                    node.getCacheSize());
+            printInfoSecondary(str);
         }
     }
 
@@ -322,6 +341,10 @@ public class ECSClient implements IECSClient {
 
     private void printInfo(String info) {
         System.out.println(PROMPT + ANSI_BOLD + ANSI_BLUE + info + ANSI_RESET);
+    }
+
+    private void printInfoSecondary(String info) {
+        System.out.println(PROMPT + ANSI_BOLD + ANSI_PURPLE + info + ANSI_RESET);
     }
 
     private void printError(String error) {
