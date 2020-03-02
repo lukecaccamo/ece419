@@ -182,4 +182,8 @@ public class ECSNode implements IECSNode {
     public int getCacheSize() {
         return cacheSize;
     }
+
+    public ECSNode getServer() {
+        return this;
+    }
 }
