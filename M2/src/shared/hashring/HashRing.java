@@ -74,9 +74,11 @@ public class HashRing {
     // client calls this
     public IECSNode serverLookup(String hashIndex){
         String key = hashRing.ceilingKey(hashIndex);
+        //System.out.println(key);
         if (key == null){
             // either wrap around to first server or no servers currently
             key = hashRing.firstKey();
+            //System.out.println(key);
             if(key == null){
                 return null;
             }
@@ -91,10 +93,14 @@ public class HashRing {
     // server calls this to check
     public boolean inServer(String keyHash, String serverHash){
         String potentialServer = hashRing.ceilingKey(keyHash);
+        //System.out.println("server: " + serverHash);
+        //System.out.println("pot: " + potentialServer);
         if (potentialServer == null){
             // wrap around
             potentialServer = hashRing.firstKey();
+            System.out.println("pot: " + potentialServer);
         }
-        return potentialServer == serverHash;
+        //System.out.println("pot: " + potentialServer);
+        return potentialServer.compareTo(serverHash) == 0;
     }
 }

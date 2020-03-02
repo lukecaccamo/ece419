@@ -246,7 +246,7 @@ public class KVCommModule implements Runnable {
 	private void sendKVSimpleMsgResponse(KVSimpleMessage msg) throws Exception {
 		StatusType status = msg.getStatus();
 		String key = msg.getKey();
-		String keyHash = Hash.MD5(key);
+		//String keyHash = Hash.MD5(key);
 		String value = msg.getValue();
 
 		switch (status) {
@@ -269,14 +269,14 @@ public class KVCommModule implements Runnable {
 				break;
 
 			case PUT:
-				//System.out.println("in put");
+				//System.out.println(server.inServer(key));
 				if (!server.inServer(key)){
 					// need to serialize metadata
 					String mdString = om.writeValueAsString(server.getMetaData());
 					sendKVMessage(StatusType.SERVER_NOT_RESPONSIBLE, key, mdString);
 					return;
 				}
-
+				//System.out.println("here");
 				status = StatusType.PUT_SUCCESS;
 
 				if(value.equals(DELETE_VALUE))

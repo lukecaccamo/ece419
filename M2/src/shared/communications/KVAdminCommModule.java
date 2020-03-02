@@ -102,6 +102,7 @@ public class KVAdminCommModule implements Runnable {
 						node.getCacheStrategy());
 				this.nodeHost = node.getNodeHost();
 				this.nodePort = node.getNodePort();
+				this.server.setServerHash(key);
 				msg.setAction(ActionType.INIT_ACK);
 				break;
 			case START:

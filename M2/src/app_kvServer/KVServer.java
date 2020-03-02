@@ -76,7 +76,7 @@ public class KVServer implements IKVServer, Runnable {
 			e.printStackTrace();
 		}
 
-		this.serverHash = Hash.MD5(this.host + ":" + this.port);
+		//this.serverHash = Hash.MD5(this.host + ":" + this.port);
 		this.om = new ObjectMapper();
 
 		assignCache(strategy);
@@ -119,7 +119,7 @@ public class KVServer implements IKVServer, Runnable {
 			e.printStackTrace();
 		}
 
-		this.serverHash = Hash.MD5(this.host + ":" + this.port);
+		//this.serverHash = Hash.MD5(this.host + ":" + this.port);
 		this.om = new ObjectMapper();
 
 		assignCache(strategy);
@@ -235,6 +235,8 @@ public class KVServer implements IKVServer, Runnable {
 
 	public boolean inServer(String key) {
 		String keyHash = Hash.MD5(key);
+		IECSNode test = this.metaData.serverLookup(keyHash);
+		//System.out.println("Size: " + this.metaData.hashRing.size());
 		return this.metaData.inServer(keyHash, this.serverHash);
 	}
 
