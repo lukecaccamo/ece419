@@ -374,7 +374,6 @@ public class KVServer implements IKVServer, Runnable {
 
 	@Override
 	public void kill() {
-		this.close();
 		try {
 			if (this.serverSocket != null && !this.serverSocket.isClosed())
 				this.serverSocket.close();

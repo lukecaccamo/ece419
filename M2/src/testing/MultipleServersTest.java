@@ -1,5 +1,6 @@
 package testing;
 
+import app_kvServer.IKVServer;
 import app_kvServer.KVServer;
 import ecs.IECSNode;
 import org.junit.Test;
@@ -30,15 +31,15 @@ public class MultipleServersTest extends TestCase {
     private int NUM_OPS = 5000;
     private int CACHE_SIZE = 1000;
     private String POLICY = "FIFO";
+    private ECSNode node = null;
 
     public void setUp() {
+
         port1 = 50501;
         port2 = port1 + 1;
 
         kvServer1 = new KVServer(port1, CACHE_SIZE, POLICY);
         kvServer2 = new KVServer(port2, CACHE_SIZE, POLICY);
-        //initially connect to first port
-        kvClient = new KVStore("localhost", 50501);
 
         kvServer1.start();
         kvServer2.start();
@@ -64,7 +65,6 @@ public class MultipleServersTest extends TestCase {
     }
 
     public void tearDown() {
-        kvClient.disconnect();
         kvServer1.kill();
         kvServer2.kill();
         reset();
@@ -85,8 +85,15 @@ public class MultipleServersTest extends TestCase {
         file.delete();
     }
 
+    private static String name = "nodeName";
+    private static String host = "nodeHost";
+    private static int port = 55;
+
     @Test
     public void testResponsibleServers() throws InterruptedException {
+
+        //initially connect to first port
+        kvClient = new KVStore("localhost", 50501);
 
         // convert serverhashes to big int, get keys that would go into each server
         BigInteger sh1 = new BigInteger(serverHash1, 32);
@@ -97,6 +104,8 @@ public class MultipleServersTest extends TestCase {
         String keyHash2 = (sh2.subtract(BigInteger.ONE)).toString(32);
         System.out.println("keyHash2: " + keyHash2);
 
+        KVSimpleMessage response = null;
+
         try {
             kvClient.connect();
         } catch (Exception e) {
@@ -104,41 +113,55 @@ public class MultipleServersTest extends TestCase {
 
         try {
             //f03eb3e2b053dfafe3acda7c20226730
-            kvClient.put("nothingmuch", "value2");
+            response = kvClient.put("nothingmuch", "value2");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        // client's connection should be to server 2 now
+        assertEquals(StatusType.PUT_SUCCESS, response.getStatus());
+        assertEquals(port2, kvClient.getServerPort());
+        assertNotNull(kvClient.getMetaData());
+
+        kvClient.disconnect();
+
+        kvServer1.clearStorage();;
+        kvServer2.clearStorage();
+    }
+
+    public void testNoServerSwitch() throws InterruptedException {
+
+        KVSimpleMessage response = null;
+        kvClient = new KVStore("localhost", 50502);
+
+        try {
+            kvClient.connect();
+        } catch (Exception e) {
+        }
+
+        try {
+            //2071e5eb7fd74592bcfacb3e9ecc4bd1
+           response = kvClient.put("ehh", "value2");
         } catch (Exception e) {
             e.printStackTrace();
         }
 
         // client's connection should be to server 2 now
         assertEquals(port2, kvClient.getServerPort());
-        assertNotNull(kvClient.getMetaData());
+        assertEquals(StatusType.PUT_SUCCESS, response.getStatus());
+        assertNull(kvClient.getMetaData());
 
-        // after receiving metadata, it'll always return server not responsible
-        // bc actual hash is different than hash that we provide the function
-        /*
-        try {
-            kvClient.put(keyHash1, "key1", "value1");
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        kvClient.disconnect();
 
-        assertEquals(port1, kvClient.getServerPort());
-
-
-        try {
-            kvSimpleMessage = kvClient.get(keyHash2, "key2");
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        assertEquals("value2", kvSimpleMessage.getValue());*/
-        kvServer1.clearStorage();;
+        kvServer1.clearStorage();
         kvServer2.clearStorage();
-        tearDown();
     }
 
     @Test
     public void testMoveData() throws InterruptedException {
+
+        //initially connect to first port
+        kvClient = new KVStore("localhost", 50501);
 
         try {
             kvClient.connect();
@@ -185,7 +208,51 @@ public class MultipleServersTest extends TestCase {
             e.printStackTrace();
         }
 
-        tearDown();
-
+        kvClient.disconnect();
+        //tearDown();
     }
+
+    @Test
+    public void testGetServerName() {
+        String actualVal = node1.getNodeName();
+        assertEquals("Server1", actualVal);
+    }
+
+    @Test
+    public void testGetPortName() {
+        int actualVal = node1.getNodePort();
+        assertEquals(port1, actualVal);
+    }
+
+    @Test
+    public void testGetHostName() {
+        String actualVal = node1.getNodeHost();
+        assertEquals("127.0.0.1", actualVal);
+    }
+
+    @Test
+    public void testGetHashKey() {
+        String goodVal = Hash.MD5("127.0.0.1" + ":" + port1);
+        String actualVal = node1.getHashKey();
+        assertEquals(goodVal, actualVal);
+    }
+
+    @Test
+    public void testFlagDefaultShutdown() {
+        IECSNode.IECSNodeFlag actualVal = node1.getFlag();
+        assertEquals(IECSNode.IECSNodeFlag.SHUT_DOWN, actualVal);
+    }
+
+    @Test
+    public void testSetCacheSize() {
+        node1.setCacheSize(33);
+        assertEquals(33, node1.getCacheSize());
+    }
+    @Test
+    public void testSetCachePolicy() {
+        node1.setCacheStrategy("LRU");
+        assertEquals(IKVServer.CacheStrategy.LRU, node1.getCacheStrategy());
+    }
+
+
 }
