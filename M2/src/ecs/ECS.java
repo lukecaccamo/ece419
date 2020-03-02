@@ -343,7 +343,6 @@ public class ECS implements IECS {
                 if (node.getNodeName().equals(name)) {
                     ECSNode to = (ECSNode) this.usedServers.getSucc(node.getHashKey());
 
-                    this.freeServers.add(node);
                     it.remove();
                     updateRingRanges();
 
@@ -356,6 +355,7 @@ public class ECS implements IECS {
                     node.setData(ActionType.UNLOCK_WRITE, this.zookeeper, this.usedServers);
 
                     node = node.setData(ActionType.SHUTDOWN, this.zookeeper, this.usedServers);
+                    this.freeServers.add(node);
                 }
             }
         }

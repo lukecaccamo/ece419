@@ -28,6 +28,8 @@ public class KVAdminCommModule implements Runnable {
 	private static Logger logger = Logger.getRootLogger();
 
 	private String name;
+	private String nodeHost;
+	private int nodePort;
 	private String zkHost;
 	private int zkPort;
 	private String zkNodeName;
@@ -98,6 +100,8 @@ public class KVAdminCommModule implements Runnable {
 			case INIT:
 				this.server.initKVServer(msg.getMetaData(), node.getCacheSize(),
 						node.getCacheStrategy());
+				this.nodeHost = node.getNodeHost();
+				this.nodePort = node.getNodePort();
 				msg.setAction(ActionType.INIT_ACK);
 				break;
 			case START:
@@ -111,7 +115,7 @@ public class KVAdminCommModule implements Runnable {
 				msg.setAction(ActionType.STOP_ACK);
 				break;
 			case SHUTDOWN:
-				node = new ECSNode(node.getNodeName(), node.getNodeHost(), node.getNodePort());
+				node = new ECSNode(this.name, this.nodeHost, this.nodePort);
 				metaData.removeServer(key);
 				metaData.addServer(key, node);
 				msg.setMetaData(metaData);
