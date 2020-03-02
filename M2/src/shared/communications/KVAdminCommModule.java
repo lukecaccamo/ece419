@@ -97,7 +97,7 @@ public class KVAdminCommModule implements Runnable {
 		switch (msg.getAction()) {
 			case INIT:
 				this.server.initKVServer(msg.getMetaData(), node.getCacheSize(),
-				node.getCacheStrategy());
+						node.getCacheStrategy());
 				msg.setAction(ActionType.INIT_ACK);
 				break;
 			case START:
@@ -173,6 +173,12 @@ public class KVAdminCommModule implements Runnable {
 			KVAdminMessage adminMsg = getAdminMessage();
 			if (adminMsg != null)
 				this.state = sendAdminMessage(adminMsg);
+		}
+		try {
+			if (zookeeper.exists(zkNodeName, false) != null)
+				zookeeper.delete(zkNodeName, -1);
+		} catch (InterruptedException | KeeperException e) {
+			logger.error(e);
 		}
 	}
 

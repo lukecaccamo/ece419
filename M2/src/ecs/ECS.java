@@ -215,19 +215,21 @@ public class ECS implements IECS {
     public IECSNode addNode(String cacheStrategy, int cacheSize) {
         ECSNode node = null;
         try {
-            node = (ECSNode) this.freeServers.remove(0);
-            node.setCacheStrategy(cacheStrategy);
-            node.setCacheSize(cacheSize);
-            this.usedServers.hashRing.put(node.getHashKey(), node);
+            if (this.freeServers.size() > 0) {
+                node = (ECSNode) this.freeServers.remove(0);
+                node.setCacheStrategy(cacheStrategy);
+                node.setCacheSize(cacheSize);
+                this.usedServers.hashRing.put(node.getHashKey(), node);
 
-            this.updateRingRanges();
-            node.startKVServer(ZOOKEEPER_HOST, ZOOKEEPER_PORT);
-            awaitNodes(1, 3000);
+                this.updateRingRanges();
+                node.startKVServer(ZOOKEEPER_HOST, ZOOKEEPER_PORT);
+                awaitNodes(1, 3000);
 
-            node = node.setData(ActionType.INIT, this.zookeeper, this.usedServers);
-            this.usedServers.hashRing.put(node.getHashKey(), node);
+                node = node.setData(ActionType.INIT, this.zookeeper, this.usedServers);
+                this.usedServers.hashRing.put(node.getHashKey(), node);
 
-            this.broadcast(ActionType.UPDATE);
+                this.broadcast(ActionType.UPDATE);
+            }
         } catch (Exception e) {
             logger.error(e);
         }
