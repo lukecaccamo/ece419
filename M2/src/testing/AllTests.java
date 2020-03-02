@@ -25,6 +25,7 @@ public class AllTests {
 			HashRing metaData = new HashRing();
 			ECSNode node = new ECSNode("Server1", server.getHost(), server.getPort());
 
+			server.setServerHash(node.getHashKey());
 			metaData.addServer(node.getHashKey(), node);
 
 			server.updateMetaData(metaData);
