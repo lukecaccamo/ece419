@@ -10,6 +10,7 @@ import app_kvServer.KVServer;
 import junit.framework.Test;
 import junit.framework.TestSuite;
 import logger.LogSetup;
+import shared.hashring.Hash;
 import shared.hashring.HashRing;
 
 
@@ -24,9 +25,8 @@ public class AllTests {
 			HashRing metaData = new HashRing();
 			ECSNode node = new ECSNode("Server1", server.getHost(), server.getPort());
 
-			String serverHash = server.getServerHash();
+			metaData.addServer(node.getHashKey(), node);
 
-			metaData.addServer(serverHash, node);
 			server.updateMetaData(metaData);
 
 		} catch (IOException e) {
