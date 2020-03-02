@@ -312,16 +312,18 @@ public class KVServer implements IKVServer, Runnable {
 		running = initializeServer();
 
 		if (this.serverSocket != null) {
-			while (isRunning()) {
-				try {
+			try {
+				while (isRunning()) {
 					Socket client = this.serverSocket.accept();
 					KVCommModule connection = new KVCommModule(client, this);
 					new Thread(connection).start();
 					logger.info("Connected to " + client.getInetAddress().getHostName()
 							+ " on port " + client.getPort());
-				} catch (IOException e) {
-					logger.error("Error! " + "Unable to establish connection. \n", e);
 				}
+				this.serverSocket.close();
+				this.serverSocket = null;
+			} catch (IOException e) {
+				logger.error("Error! " + "Unable to establish connection. \n", e);
 			}
 		}
 		logger.info("Server stopped.");
@@ -329,7 +331,7 @@ public class KVServer implements IKVServer, Runnable {
 
 	@Override
 	public void kill() {
-		this.running = false;
+		this.close();
 		try {
 			if (this.serverSocket != null && !this.serverSocket.isClosed())
 				this.serverSocket.close();
@@ -342,13 +344,6 @@ public class KVServer implements IKVServer, Runnable {
 	public void close() {
 		this.running = false;
 		this.adminCommModule.setRunning(false);
-		try {
-			// TODO: Destroy all generated threads and close connections.
-			if (this.serverSocket != null && !this.serverSocket.isClosed())
-				this.serverSocket.close();
-		} catch (IOException e) {
-			logger.error("Error! " + "Unable to close socket on port: " + this.getPort(), e);
-		}
 	}
 
 	private boolean isRunning() {
