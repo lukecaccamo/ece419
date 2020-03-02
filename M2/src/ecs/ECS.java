@@ -145,20 +145,26 @@ public class ECS implements IECS {
         return true;
     }
 
-    private void updateRingRanges() {
-        if (this.usedServers.hashRing.size() > 0) {
-            String prevHash = null;
-            for (Map.Entry<String, IECSNode> entry : this.usedServers.hashRing.entrySet()) {
-                if (prevHash != null) {
-                    IECSNode n = entry.getValue();
-                    n.setNodeHashRange(prevHash, entry.getKey());
-                }
-                prevHash = entry.getKey();
+    private String updateRingRanges(String key) {
+        if (this.usedServers.hashRing.size() < 1) return null;
+
+        Iterator<Map.Entry<String, IECSNode>> it = this.usedServers.hashRing.entrySet().iterator();
+        String moveFrom = null;
+        String prevHash = null;
+        while (it.hasNext()) {
+            Map.Entry<String, IECSNode> entry = it.next();
+            if (prevHash != null) {
+                IECSNode n = entry.getValue();
+                n.setNodeHashRange(prevHash, entry.getKey());
             }
-            String firstHash = this.usedServers.hashRing.firstKey();
-            IECSNode n = this.usedServers.hashRing.get(firstHash);
-            n.setNodeHashRange(prevHash, firstHash);
+            if (entry.getKey() == key) moveFrom = prevHash;
+            prevHash = entry.getKey();
         }
+        String firstHash = this.usedServers.hashRing.firstKey();
+        IECSNode n = this.usedServers.hashRing.get(firstHash);
+        n.setNodeHashRange(prevHash, firstHash);
+        if (firstHash == key) moveFrom = prevHash;
+        return moveFrom;
     }
 
     public ECS(String configFilePath) {
@@ -225,7 +231,7 @@ public class ECS implements IECS {
                 node.setCacheSize(cacheSize);
                 this.usedServers.hashRing.put(node.getHashKey(), node);
 
-                this.updateRingRanges();
+                String migrationKey = this.updateRingRanges(node.getHashKey());
                 node.startKVServer(ZOOKEEPER_HOST, ZOOKEEPER_PORT);
                 awaitNodes(1, 3000);
 
@@ -233,6 +239,15 @@ public class ECS implements IECS {
                 this.usedServers.hashRing.put(node.getHashKey(), node);
 
                 this.broadcast(ActionType.UPDATE);
+
+                ECSNode from = (ECSNode) this.usedServers.hashRing.get(migrationKey);
+                from.setData(ActionType.LOCK_WRITE, this.zookeeper, this.usedServers);
+                node.setData(ActionType.LOCK_WRITE, this.zookeeper, this.usedServers);
+
+                from.moveData(node.getHashKey(), this.zookeeper, this.usedServers);
+
+                from.setData(ActionType.UNLOCK_WRITE, this.zookeeper, this.usedServers);
+                node.setData(ActionType.UNLOCK_WRITE, this.zookeeper, this.usedServers);
             }
         } catch (Exception e) {
             logger.error(e);
@@ -276,7 +291,7 @@ public class ECS implements IECS {
             this.usedServers.hashRing.put(node.getHashKey(), node);
         }
 
-        this.updateRingRanges();
+        this.updateRingRanges(null);
 
         for (Map.Entry<String, IECSNode> entry : this.usedServers.hashRing.entrySet()) {
             ECSNode node = (ECSNode) entry.getValue();
@@ -335,7 +350,7 @@ public class ECS implements IECS {
             }
         }
 
-        this.updateRingRanges();
+        this.updateRingRanges(null);
         this.broadcast(ActionType.UPDATE);
 
         return true;

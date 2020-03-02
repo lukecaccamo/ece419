@@ -90,6 +90,21 @@ public class ECSNode implements IECSNode {
         return null;
     }
 
+    public ECSNode moveData(String moveTo, ZooKeeper zookeeper, HashRing hashRing) {
+        try {
+            String zkNodeName = ECS.ZOOKEEPER_ADMIN_NODE_NAME + "/" + this.getNodeName();
+            Stat zkStat = zookeeper.exists(zkNodeName, false);
+            KVAdminMessage adminMessage = new KVAdminMessage(ActionType.MOVE_DATA, moveTo, hashRing);
+            String jsonMetaData = this.objectMapper.writeValueAsString(adminMessage).trim();
+            byte[] jsonBytes = KVCommModule.toByteArray(jsonMetaData);
+            zookeeper.setData(zkNodeName, jsonBytes, zkStat.getVersion());
+            return this.await(jsonMetaData, zookeeper);
+        } catch (JsonProcessingException | KeeperException | InterruptedException e) {
+            logger.error(e);
+        }
+        return null;
+    }
+
     private ECSNode await(String oldState, ZooKeeper zookeeper) {
         try {
             String zkNodeName = ECS.ZOOKEEPER_ADMIN_NODE_NAME + "/" + this.getNodeName();
