@@ -143,7 +143,6 @@ public class AdditionalTest extends TestCase {
 		} catch (Exception e) {
 			ex = e;
 		}
-		//System.out.println(storedValue.equals((value)));
 		
 		assertTrue(ex == null && storedValue.equals(value));
 	}

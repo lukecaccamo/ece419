@@ -134,8 +134,6 @@ public class KVCommModule implements Runnable {
 		setRunning(false);
 		logger.info("tearing down the connection ...");
 		if (this.socket != null) {
-			//input.close();
-			//output.close();
 			this.socket.close();
 			this.socket = null;
 			logger.info("connection closed!");
@@ -269,21 +267,17 @@ public class KVCommModule implements Runnable {
 				break;
 
 			case PUT:
-				//System.out.println(server.inServer(key));
 				if (!server.inServer(key)){
 					// need to serialize metadata
 					String mdString = om.writeValueAsString(server.getMetaData());
 					sendKVMessage(StatusType.SERVER_NOT_RESPONSIBLE, key, mdString);
 					return;
 				}
-				//System.out.println("here");
 				status = StatusType.PUT_SUCCESS;
 
 				if(value.equals(DELETE_VALUE))
 					status = StatusType.DELETE_SUCCESS;
 				else if(server.inCache(key) || server.inStorage(key)) {
-					//System.out.println(server.inCache(key));
-					//System.out.println(server.inStorage(key));
 					status = StatusType.PUT_UPDATE;
 				}
 

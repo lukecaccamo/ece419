@@ -25,13 +25,12 @@ public class KVDatabase {
     private String indexFile = "index.txt";
     private String databaseFile = "databaseFile.db";
     private int port;
-    //byte for valid, 4 bytes per lengths (ints)
+    // byte for valid, 4 bytes per lengths (ints)
     private Integer entryLength = 1 + 4 + 4 + 20 + 128000;
     private HashMap<String, Integer> index;
     private HashComparator hc;
 
     public KVDatabase(int port) {
-        // Map<String, Long> index = new HashMap<String, long>();
         this.port = port;
         databaseFile = port + databaseFile;
         indexFile = this.port + indexFile;
@@ -40,9 +39,9 @@ public class KVDatabase {
         hc = new HashComparator();
     }
 
-    public void initDB(){
+    public void initDB() {
         File database = new File(databaseFile);
-        if (!database.exists()){
+        if (!database.exists()) {
             try {
                 database.createNewFile();
             } catch (IOException e) {
@@ -52,9 +51,9 @@ public class KVDatabase {
         }
     }
 
-    public HashMap<String, Integer> loadIndex(){
+    public HashMap<String, Integer> loadIndex() {
         File tmp = new File(indexFile);
-        if (!tmp.exists()){
+        if (!tmp.exists()) {
             // don't have to make new index file here because it is created in saveIndex
             return new HashMap<String, Integer>();
         }
@@ -66,8 +65,6 @@ public class KVDatabase {
             map = (HashMap<String, Integer>) objectIn.readObject();
             fileIn.close();
             objectIn.close();
-            //System.out.println("Index loaded");
-            //System.out.println(map);
             return map;
         } catch (Exception ex) {
             ex.printStackTrace();
@@ -75,15 +72,14 @@ public class KVDatabase {
         }
     }
 
-    public boolean inStorage(String key){
+    public boolean inStorage(String key) {
         return index.containsKey(key);
     }
 
 
     public String get(String key) throws IOException {
         Integer start = index.get(key);
-        //System.out.println(start);
-        if (start != null){
+        if (start != null) {
             String value = getValue(start);
             return value;
         }
@@ -94,7 +90,9 @@ public class KVDatabase {
         RandomAccessFile raf = new RandomAccessFile(databaseFile, "r");
         raf.seek(start);
         boolean valid = raf.readBoolean();
-        if (!valid) {return null;}
+        if (!valid) {
+            return null;
+        }
 
         raf.seek(start + 1 + 4);
         int valueSize = raf.readInt();
@@ -118,7 +116,7 @@ public class KVDatabase {
 
         raf.seek(indexLoc);
 
-        if (value == "null"){
+        if (value == "null") {
             raf.writeBoolean(false);
             raf.close();
 
@@ -133,17 +131,15 @@ public class KVDatabase {
         raf.seek(indexLoc + entryLength - 128000);
         raf.writeBytes(value);
 
-
-        //System.out.println(raf.length());
         raf.close();
 
         index.put(key, (int) indexLoc);
     }
 
-    public void put(String key, String value){
+    public void put(String key, String value) {
 
         Integer start = index.get(key);
-        if (start != null){
+        if (start != null) {
             // update existing
             try {
                 writeKV(start, key, value);
@@ -151,9 +147,9 @@ public class KVDatabase {
                 logger.error("Error! Write to disk");
             }
         } else {
-            //new entry
+            // new entry
             try {
-                //can also start from beginning of file and loop through until find invalid block
+                // can also start from beginning of file and loop through until find invalid block
                 writeKV(-1, key, value);
             } catch (IOException e) {
                 logger.error("Error! Write to disk");
@@ -166,15 +162,12 @@ public class KVDatabase {
 
     public boolean saveIndex() {
         try {
-
-            //System.out.println(index);
-            FileOutputStream fileOut = new FileOutputStream(indexFile,false);
+            FileOutputStream fileOut = new FileOutputStream(indexFile, false);
             ObjectOutputStream objectOut = new ObjectOutputStream(fileOut);
             objectOut.writeObject(index);
             objectOut.close();
             fileOut.close();
             logger.info("Index saved");
-            //System.out.println("Index saved");
         } catch (IOException i) {
             logger.error("Error! Saving index");
 
@@ -183,7 +176,7 @@ public class KVDatabase {
     }
 
     public void clear() {
-        if (index!=null){
+        if (index != null) {
             index.clear();
         }
 
@@ -198,7 +191,7 @@ public class KVDatabase {
 
     }
 
-    public HashMap<String, String> moveData(String[] range){
+    public HashMap<String, String> moveData(String[] range) {
         String start = range[0];
         String end = range[1];
 
@@ -207,9 +200,9 @@ public class KVDatabase {
         for (Map.Entry<String, Integer> entry : index.entrySet()) {
             String key = entry.getKey();
             String keyHash = Hash.MD5(key);
-            if(hc.compare(keyHash, start) >= 0 && hc.compare(keyHash, end) <= 0){
+            if (hc.compare(keyHash, start) >= 0 && hc.compare(keyHash, end) <= 0) {
                 Integer startIndex = entry.getValue();
-                //find in actual db file
+                // find in actual db file
                 String value = "";
                 try {
                     value = getValue(startIndex);
@@ -222,7 +215,7 @@ public class KVDatabase {
         return movingData;
     }
 
-    public void deleteMovedData(HashMap<String, String> movedData){
+    public void deleteMovedData(HashMap<String, String> movedData) {
         for (Map.Entry<String, String> entry : movedData.entrySet()) {
             // don't really need to delete from db, as long as index is deleted
             index.remove(entry.getKey());
@@ -230,7 +223,7 @@ public class KVDatabase {
         saveIndex();
     }
 
-    public void receiveData(HashMap<String, String> newData){
+    public void receiveData(HashMap<String, String> newData) {
 
         for (Map.Entry<String, String> entry : newData.entrySet()) {
             try {

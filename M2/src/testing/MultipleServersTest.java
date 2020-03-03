@@ -92,7 +92,7 @@ public class MultipleServersTest extends TestCase {
     @Test
     public void testResponsibleServers() throws InterruptedException {
 
-        //initially connect to first port
+        // initially connect to first port
         kvClient = new KVStore("localhost", 50501);
 
         // convert serverhashes to big int, get keys that would go into each server
@@ -112,7 +112,6 @@ public class MultipleServersTest extends TestCase {
         }
 
         try {
-            //f03eb3e2b053dfafe3acda7c20226730
             response = kvClient.put("nothingmuch", "value2");
         } catch (Exception e) {
             e.printStackTrace();
@@ -140,8 +139,7 @@ public class MultipleServersTest extends TestCase {
         }
 
         try {
-            //2071e5eb7fd74592bcfacb3e9ecc4bd1
-           response = kvClient.put("ehh", "value2");
+            response = kvClient.put("ehh", "value2");
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -160,7 +158,7 @@ public class MultipleServersTest extends TestCase {
     @Test
     public void testMoveData() throws InterruptedException {
 
-        //initially connect to first port
+        // initially connect to first port
         kvClient = new KVStore("localhost", 50501);
 
         try {
@@ -173,8 +171,7 @@ public class MultipleServersTest extends TestCase {
 
         // put 100 keys into server 1--just large enough so that at least some will get in
         int i = 0;
-        for (i = 0; i < 20; i++){
-            //System.out.println("in loop1");
+        for (i = 0; i < 20; i++) {
             try {
                 kvClient.put(key + String.valueOf(i), value + String.valueOf(i));
             } catch (Exception e) {
@@ -183,16 +180,15 @@ public class MultipleServersTest extends TestCase {
         }
 
         String[] range = {"0", "ffffffffffffffffffffffffffffffff"};
-        //String[] range = {serverHash1, serverHash2}
+        // String[] range = {serverHash1, serverHash2}
         try {
             kvServer1.moveData(range, serverHash2);
         } catch (Exception e) {
             e.printStackTrace();
         }
 
-        for (i = 0; i < 20; i++){
+        for (i = 0; i < 20; i++) {
             try {
-                //System.out.println("in loop2");
                 String s2value = kvServer2.getKV(key + String.valueOf(i));
                 assertEquals(value + String.valueOf(i), s2value);
             } catch (Exception e) {
@@ -201,7 +197,6 @@ public class MultipleServersTest extends TestCase {
         }
 
         try {
-            System.out.println("in loop3");
             String s2value = kvServer1.getKV("key0");
             assertNull(s2value);
         } catch (Exception e) {
@@ -209,7 +204,7 @@ public class MultipleServersTest extends TestCase {
         }
 
         kvClient.disconnect();
-        //tearDown();
+        // tearDown();
     }
 
     @Test
@@ -248,6 +243,7 @@ public class MultipleServersTest extends TestCase {
         node1.setCacheSize(33);
         assertEquals(33, node1.getCacheSize());
     }
+
     @Test
     public void testSetCachePolicy() {
         node1.setCacheStrategy("LRU");

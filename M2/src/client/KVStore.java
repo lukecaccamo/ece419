@@ -56,7 +56,6 @@ public class KVStore implements KVCommInterface {
 		StatusType returnMsgStatus = StatusType.SERVER_NOT_RESPONSIBLE;
 		KVSimpleMessage returnMsg = null;
 		while(returnMsgStatus == StatusType.SERVER_NOT_RESPONSIBLE) {
-			//System.out.println("Here");
 
 			if (key.length() > MAX_KEY || key.isEmpty())
 				return new KVSimpleMessage(StatusType.PUT_ERROR, "Key cannot be greater than 20 bytes or empty", null);
@@ -75,20 +74,15 @@ public class KVStore implements KVCommInterface {
 				disconnect();
 				this.serverAddress = responsible.getNodeHost();
 				this.serverPort = responsible.getNodePort();
-				//System.out.println("host: " + this.serverAddress);
-				//System.out.println(this.serverPort);
 				connect();
 			}
 
 			this.communications.sendKVMessage(StatusType.PUT, key, value);
 
-			//System.out.println("Waiting");
 			returnMsg = this.communications.receiveKVMessage();
-			//System.out.println("Got message");
 			returnMsgStatus = returnMsg.getStatus();
 			System.out.println(returnMsgStatus);
 			if (returnMsgStatus == StatusType.SERVER_NOT_RESPONSIBLE) {
-				//System.out.println("new metadata");
 				try {
 					this.metaData = this.om.readValue(returnMsg.getValue(), HashRing.class);
 					System.out.println("new metadata");
@@ -115,7 +109,6 @@ public class KVStore implements KVCommInterface {
 
 			// get correct server, connect to it
 			if (this.metaData != null) {
-				//System.out.println("Reconnect");
 				String keyHash = Hash.MD5(key);
 				IECSNode responsible = this.metaData.serverLookup(keyHash);
 				disconnect();

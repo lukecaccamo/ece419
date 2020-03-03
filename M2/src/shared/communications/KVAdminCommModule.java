@@ -91,7 +91,6 @@ public class KVAdminCommModule implements Runnable {
 	}
 
 	private String sendAdminMessage(KVAdminMessage msg) {
-		// TODO: send response to ecs when complete
 		String key = msg.getHashKey();
 		HashRing metaData = msg.getMetaData();
 		IECSNode node = metaData.getHashRing().get(msg.getHashKey());
@@ -172,7 +171,6 @@ public class KVAdminCommModule implements Runnable {
 		return null;
 	}
 
-	// Called by server only
 	public void run() {
 		while (isRunning()) {
 			KVAdminMessage adminMsg = getAdminMessage();
