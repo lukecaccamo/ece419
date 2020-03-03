@@ -356,12 +356,11 @@ public class ECS implements IECS {
 
                     node = node.setData(ActionType.SHUTDOWN, this.zookeeper, this.usedServers);
                     this.freeServers.add(node);
+
+                    this.broadcast(ActionType.UPDATE);
                 }
             }
         }
-
-        this.broadcast(ActionType.UPDATE);
-
         return true;
     }
 
