@@ -11,6 +11,7 @@ import ecs.IECSNode;
 import logger.LogSetup;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import shared.Prompt;
 import shared.communications.KVAdminCommModule;
 import shared.communications.KVCommModule;
 import shared.exceptions.DeleteException;
@@ -26,8 +27,8 @@ import java.net.*;
 import java.util.HashMap;
 
 public class KVServer implements IKVServer, Runnable {
-
 	private static Logger logger = Logger.getRootLogger();
+	public final Prompt prompt;
 
 	private boolean running;
 	private String host;
@@ -62,6 +63,8 @@ public class KVServer implements IKVServer, Runnable {
 	 *                      Options are "FIFO", "LRU", and "LFU".
 	 */
 	public KVServer(int port, int cacheSize, String cacheStrategy) {
+		this.prompt = new Prompt("KVServer");
+
 		this.host = "";
 		this.port = port;
 		this.cacheSize = cacheSize;
@@ -91,6 +94,8 @@ public class KVServer implements IKVServer, Runnable {
 	 * @param zkPort     given port for ZooKeeper to operate
 	 */
 	public KVServer(String serverName, int port, String zkHost, int zkPort) {
+		this.prompt = new Prompt(serverName);
+
 		this.serverName = serverName;
 		this.host = "";
 		this.port = port;
@@ -132,7 +137,7 @@ public class KVServer implements IKVServer, Runnable {
 			case None:
 				break;
 			default:
-				System.out.println("Error! Invalid <cacheStrategy>!");
+				this.prompt.print("Error! Invalid <cacheStrategy>!");
 				System.exit(1);
 				break;
 		}
@@ -140,6 +145,7 @@ public class KVServer implements IKVServer, Runnable {
 		this.cacheStrategy = cacheStrategy.toString();
 
 		if (!this.running)
+			this.prompt.print("Running!");
 			new Thread(this).start();
 	}
 
@@ -365,6 +371,7 @@ public class KVServer implements IKVServer, Runnable {
 	 * @param args contains the port number at args[0].
 	 */
 	public static void main(String[] args) {
+		Prompt prompt = new Prompt("KVServer");
 		try {
 			new LogSetup("logs/server.log", Level.WARN);
 			if (args.length == 3) {
@@ -381,16 +388,16 @@ public class KVServer implements IKVServer, Runnable {
 
 				KVServer server = new KVServer(serverName, port, zkHost, zkPort);
 			} else {
-				System.out.println("Error! Invalid number of arguments!");
-				System.out.println("Usage: Server <port> <cacheSize> <cacheStrategy>");
+				prompt.printError("Error! Invalid number of arguments!");
+				prompt.printError("Usage: Server <port> <cacheSize> <cacheStrategy>");
 			}
 		} catch (IOException e) {
-			System.out.println("Error! Unable to initialize logger!");
+			prompt.printError("Error! Unable to initialize logger!");
 			e.printStackTrace();
 			System.exit(1);
 		} catch (NumberFormatException nfe) {
-			System.out.println("Error! Invalid argument <port>! Not a number!");
-			System.out.println("Usage: Server <port>!");
+			prompt.printError("Error! Invalid argument <port>! Not a number!");
+			prompt.printError("Usage: Server <port>!");
 			System.exit(1);
 		}
 	}

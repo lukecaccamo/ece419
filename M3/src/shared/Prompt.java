@@ -19,6 +19,10 @@ public class Prompt {
         System.out.print(this.line);
     }
 
+    public void print(String comment) {
+        System.out.println(this.line + comment);
+    }
+
     public String get() {
         return this.line;
     }
