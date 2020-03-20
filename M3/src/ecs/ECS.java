@@ -64,7 +64,7 @@ public class ECS implements IECS {
                     }
                 }
             };
-            this.zookeeper = new ZooKeeper("localhost", 300000000, watcher);
+            this.zookeeper = new ZooKeeper("localhost", 3000, watcher);
             connected.await();
         } catch (Exception e) {
             logger.error(e);

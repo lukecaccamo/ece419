@@ -99,7 +99,6 @@ public class KVServer implements IKVServer, Runnable {
 	public KVServer(String name, String zkHost, int zkPort, int port, int cacheSize,
 			String strategy) {
 
-		this.logger.setLevel(Level.ERROR);
 		this.name = name;
 		this.zkHost = zkHost;
 		this.zkPort = zkPort;
@@ -381,7 +380,7 @@ public class KVServer implements IKVServer, Runnable {
 	@Override
 	public void close() {
 		this.running = false;
-		this.adminCommModule.setRunning(false);
+		this.adminCommModule.close();
 	}
 
 	private boolean isRunning() {
@@ -411,7 +410,7 @@ public class KVServer implements IKVServer, Runnable {
 	 */
 	public static void main(String[] args) {
 		try {
-			new LogSetup("logs/server.log", Level.ALL);
+			new LogSetup("logs/server.log", Level.ERROR);
 			if (args.length == 3) {
 				int port = Integer.parseInt(args[0]);
 				int cacheSize = Integer.parseInt(args[1]);

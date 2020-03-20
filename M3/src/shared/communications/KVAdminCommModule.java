@@ -42,8 +42,7 @@ public class KVAdminCommModule implements Runnable {
 	private boolean running;
 
 	public KVAdminCommModule(String name, String zkHost, int zkPort, KVServer server) {
-		this.setRunning(true);
-		this.logger.setLevel(Level.ERROR);
+		this.running = true;
 		this.name = name;
 		this.zkHost = zkHost;
 		this.zkPort = zkPort;
@@ -63,10 +62,9 @@ public class KVAdminCommModule implements Runnable {
 					}
 				}
 			};
-			this.zookeeper = new ZooKeeper(this.zkHost + ":" + this.zkPort, 300000000, watcher);
+			this.zookeeper = new ZooKeeper(this.zkHost + ":" + this.zkPort, 3000, watcher);
 			connected.await();
-			this.zookeeper.create(zkNodeName, null, ZooDefs.Ids.OPEN_ACL_UNSAFE,
-					CreateMode.PERSISTENT);
+			this.zookeeper.create(zkNodeName, null, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
 		} catch (IOException | KeeperException | InterruptedException e) {
 			logger.error(e);
 		}
@@ -97,8 +95,7 @@ public class KVAdminCommModule implements Runnable {
 
 		switch (msg.getAction()) {
 			case INIT:
-				this.server.initKVServer(msg.getMetaData(), node.getCacheSize(),
-						node.getCacheStrategy());
+				this.server.initKVServer(msg.getMetaData(), node.getCacheSize(), node.getCacheStrategy());
 				this.nodeHost = node.getNodeHost();
 				this.nodePort = node.getNodePort();
 				this.server.setServerHash(key);
@@ -172,7 +169,7 @@ public class KVAdminCommModule implements Runnable {
 	}
 
 	public void run() {
-		while (isRunning()) {
+		while (this.running) {
 			KVAdminMessage adminMsg = getAdminMessage();
 			if (adminMsg != null)
 				this.state = sendAdminMessage(adminMsg);
@@ -185,11 +182,7 @@ public class KVAdminCommModule implements Runnable {
 		}
 	}
 
-	public boolean isRunning() {
-		return this.running;
-	}
-
-	public void setRunning(boolean running) {
-		this.running = running;
+	public void close() {
+		this.running = false;
 	}
 }

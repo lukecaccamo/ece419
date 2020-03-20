@@ -36,7 +36,6 @@ public class ECSClient implements IECSClient {
 
     public ECSClient(String configFilePath) {
         this.logger = Logger.getRootLogger();
-        this.logger.setLevel(Level.ERROR);
         this.ecs = new ECS(configFilePath);
     }
 
@@ -353,7 +352,7 @@ public class ECSClient implements IECSClient {
 
     public static void main(String[] args) {
         try {
-            new LogSetup("logs/ecs.log", Level.ALL);
+            new LogSetup("logs/ecs.log", Level.ERROR);
             if (args.length != 1) {
                 System.out.println("Error! Invalid number of arguments!");
                 System.out.println("Usage: ECS <configFilePath>");
