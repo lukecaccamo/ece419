@@ -21,22 +21,25 @@ import shared.Prompt;
 import shared.Prompt.*;
 
 public class ECSClient implements IECSClient {
-
     private static Logger logger;
+    private final boolean debug;
+
     private Prompt prompt = new Prompt("ECSAdmin");
     private BufferedReader stdin;
     private boolean stop = false;
     private ECS ecs;
 
-    public ECSClient(String configFilePath) {
+    public ECSClient(String configFilePath, boolean debug) {
         this.logger = Logger.getRootLogger();
-        this.ecs = new ECS(configFilePath);
+        this.debug = debug;
+        this.ecs = new ECS(configFilePath, this.debug);
     }
 
     public void run() {
-        this.printUsedServers();
-        this.printFreeServers();
         while (!this.stop) {
+            this.printUsedServers();
+            this.printFreeServers();
+
             this.stdin = new BufferedReader(new InputStreamReader(System.in));
             this.prompt.print();
 
@@ -112,118 +115,53 @@ public class ECSClient implements IECSClient {
                 this.prompt.printError("Unknown command");
                 this.printHelp();
         }
-
-        this.printUsedServers();
-        this.printFreeServers();
     }
 
-    /**
-     * Starts the storage service by calling start() on all KVServer instances that
-     * participate in the service.\
-     * 
-     * @throws Exception some meaningfull exception on failure
-     * @return true on success, false on failure
-     */
     @Override
     public boolean start() {
         return this.ecs.start();
     }
 
-    /**
-     * Stops the service; all participating KVServers are stopped for processing
-     * client requests but the processes remain running.
-     * 
-     * @throws Exception some meaningfull exception on failure
-     * @return true on success, false on failure
-     */
     @Override
     public boolean stop() {
         return this.ecs.stop();
     }
 
-    /**
-     * Stops all server instances and exits the remote processes.
-     * 
-     * @throws Exception some meaningfull exception on failure
-     * @return true on success, false on failure
-     */
     @Override
     public boolean shutdown() {
         return this.ecs.shutdown();
     }
 
-    /**
-     * Create a new KVServer with the specified cache size and replacement strategy
-     * and add it to the storage service at an arbitrary position.
-     * 
-     * @return name of new server
-     */
     @Override
     public IECSNode addNode(String cacheStrategy, int cacheSize) {
         return this.ecs.addNode(cacheStrategy, cacheSize);
     }
 
-    /**
-     * Randomly choose <numberOfNodes> servers from the available machines and start
-     * the KVServer by issuing an SSH call to the respective machine. This call
-     * launches the storage server with the specified cache size and replacement
-     * strategy. For simplicity, locate the KVServer.jar in the same directory as
-     * the ECS. All storage servers are initialized with the metadata and any
-     * persisted data, and remain in state stopped. NOTE: Must call setupNodes
-     * before the SSH calls to start the servers and must call awaitNodes before
-     * returning
-     * 
-     * @return set of strings containing the names of the nodes
-     */
     @Override
     public Collection<IECSNode> addNodes(int count, String cacheStrategy, int cacheSize) {
         return this.ecs.addNodes(count, cacheStrategy, cacheSize);
     }
 
-    /**
-     * Sets up `count` servers with the ECS (in this case Zookeeper)
-     * 
-     * @return array of strings, containing unique names of servers
-     */
     @Override
     public Collection<IECSNode> setupNodes(int count, String cacheStrategy, int cacheSize) {
         return this.ecs.setupNodes(count, cacheStrategy, cacheSize);
     }
 
-    /**
-     * Wait for all nodes to report status or until timeout expires
-     * 
-     * @param count   number of nodes to wait for
-     * @param timeout the timeout in milliseconds
-     * @return true if all nodes reported successfully, false otherwise
-     */
     @Override
     public boolean awaitNodes(int count, int timeout) throws Exception {
         return this.ecs.awaitNodes(count, timeout);
     }
 
-    /**
-     * Removes nodes with names matching the nodeNames array
-     * 
-     * @param nodeNames names of nodes to remove
-     * @return true on success, false otherwise
-     */
     @Override
     public boolean removeNodes(Collection<String> nodeNames) {
         return this.ecs.removeNodes(nodeNames);
     }
 
-    /**
-     * Get a map of all nodes
-     */
     @Override
     public Map<String, IECSNode> getNodes() {
         return this.ecs.getNodes();
     }
 
-    /**
-     * Get the specific node responsible for the given key
-     */
     @Override
     public IECSNode getNodeByKey(String Key) {
         return this.ecs.getNodeByKey(Key);
@@ -254,7 +192,8 @@ public class ECSClient implements IECSClient {
         StringBuilder sb = new StringBuilder();
         sb.append(this.prompt.get() + "\n");
 
-        sb.append(this.prompt.get()).append(Prompt.ANSI_BOLD + Prompt.ANSI_BLUE + "ECS CLIENT HELP (Usage):\n" + Prompt.ANSI_RESET);
+        sb.append(this.prompt.get())
+                .append(Prompt.ANSI_BOLD + Prompt.ANSI_BLUE + "ECS CLIENT HELP (Usage):\n" + Prompt.ANSI_RESET);
 
         sb.append(this.prompt.get()).append(Prompt.ANSI_BOLD + "start" + Prompt.ANSI_RESET);
         sb.append("\t\t\t starts the storage service on all KVServer instances that participate \n");
@@ -263,18 +202,21 @@ public class ECSClient implements IECSClient {
         sb.append(
                 "\t\t\t all participating KVServers are stopped for processing client requests but the processes remain running \n");
 
-        sb.append(this.prompt.get()).append(Prompt.ANSI_BOLD + "add " + Prompt.ANSI_BLUE + "<strategy> <size>" + Prompt.ANSI_RESET);
+        sb.append(this.prompt.get())
+                .append(Prompt.ANSI_BOLD + "add " + Prompt.ANSI_BLUE + "<strategy> <size>" + Prompt.ANSI_RESET);
         sb.append("\t choose a server from available machines and start it with cache options " + Prompt.ANSI_BLUE
                 + "<strategy> " + Prompt.ANSI_RESET + "and " + Prompt.ANSI_BLUE + "<size> \n");
 
-        sb.append(this.prompt.get()).append(Prompt.ANSI_BOLD + "add " + Prompt.ANSI_BLUE + "<m> <strategy> <size>" + Prompt.ANSI_RESET);
+        sb.append(this.prompt.get())
+                .append(Prompt.ANSI_BOLD + "add " + Prompt.ANSI_BLUE + "<m> <strategy> <size>" + Prompt.ANSI_RESET);
         sb.append("\t choose " + Prompt.ANSI_BLUE + "<m> " + Prompt.ANSI_RESET
-                + "servers from available machines and start them with cache options " + Prompt.ANSI_BLUE + "<strategy> "
-                + Prompt.ANSI_RESET + "and " + Prompt.ANSI_BLUE + "<size> \n");
+                + "servers from available machines and start them with cache options " + Prompt.ANSI_BLUE
+                + "<strategy> " + Prompt.ANSI_RESET + "and " + Prompt.ANSI_BLUE + "<size> \n");
 
-        sb.append(this.prompt.get()).append(Prompt.ANSI_BOLD + "remove " + Prompt.ANSI_BLUE + "<name>" + Prompt.ANSI_RESET);
-        sb.append(
-                "\t\t remove a server from the storage service with name " + Prompt.ANSI_BLUE + "<name>" + Prompt.ANSI_RESET + "\n");
+        sb.append(this.prompt.get())
+                .append(Prompt.ANSI_BOLD + "remove " + Prompt.ANSI_BLUE + "<name>" + Prompt.ANSI_RESET);
+        sb.append("\t\t remove a server from the storage service with name " + Prompt.ANSI_BLUE + "<name>"
+                + Prompt.ANSI_RESET + "\n");
 
         sb.append(this.prompt.get()).append(Prompt.ANSI_BOLD + "logLevel" + Prompt.ANSI_RESET);
         sb.append("\t\t\t changes the logLevel: \n");
@@ -289,7 +231,6 @@ public class ECSClient implements IECSClient {
     }
 
     private String setLevel(String levelString) {
-
         if (levelString.equals(Level.ALL.toString())) {
             this.logger.setLevel(Level.ALL);
             return Level.ALL.toString();
@@ -319,12 +260,15 @@ public class ECSClient implements IECSClient {
     public static void main(String[] args) {
         try {
             new LogSetup("logs/ecs.log", Level.WARN);
-            if (args.length != 1) {
-                System.out.println("Error! Invalid number of arguments!");
-                System.out.println("Usage: ECS <configFilePath>");
-            } else {
-                ECSClient ecsClient = new ECSClient(args[0]);
+            if (args.length == 1) {
+                ECSClient ecsClient = new ECSClient(args[0], false);
                 ecsClient.run();
+            } else if (args.length == 2 && args[1].equals("-d")) {
+                ECSClient ecsClient = new ECSClient(args[0], true);
+                ecsClient.run();
+            } else {
+                System.out.println("Error! Invalid arguments!");
+                System.out.println("Usage: ECS <configFilePath> [-d]");
             }
         } catch (IOException e) {
             System.out.println("Error! Unable to initialize logger!");

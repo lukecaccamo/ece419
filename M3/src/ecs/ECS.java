@@ -27,6 +27,7 @@ import shared.messages.IKVAdminMessage.ActionType;
 
 public class ECS implements IECS {
     private static Logger logger = Logger.getRootLogger();
+    private final boolean debug;
 
     private Properties properties;
     public ArrayList<IECSNode> freeServers;
@@ -35,7 +36,9 @@ public class ECS implements IECS {
     private ZooKeeper zk;
     private CountDownLatch connected;
 
-    public ECS(String configFilePath) {
+    public ECS(String configFilePath, boolean debug) {
+        this.debug = debug;
+
         this.properties = new Properties();
         this.freeServers = new ArrayList<>();
         this.usedServers = new HashRing();
@@ -45,7 +48,7 @@ public class ECS implements IECS {
         this.initializeServers(configFilePath);
         this.resetZooKeeperNodes(this.freeServers.iterator());
 
-        this.setupNodes(1, DEFAULT_CACHE_STRATEGY, DEFAULT_CACHE_SIZE);
+        this.setupNodes(3, DEFAULT_CACHE_STRATEGY, DEFAULT_CACHE_SIZE);
     }
 
     /**
@@ -100,7 +103,7 @@ public class ECS implements IECS {
                 this.usedServers.hashRing.put(node.getHashKey(), node);
 
                 this.updateRingRanges();
-                node.startKVServer(IECS.ZOOKEEPER_HOST, IECS.ZOOKEEPER_PORT);
+                node.startKVServer(IECS.ZOOKEEPER_HOST, IECS.ZOOKEEPER_PORT, this.debug);
                 awaitNodes(1, 30000);
 
                 node = node.setData(ActionType.INIT, this.zk, this.usedServers);
@@ -166,7 +169,7 @@ public class ECS implements IECS {
 
         for (Map.Entry<String, IECSNode> entry : this.usedServers.hashRing.entrySet()) {
             ECSNode node = (ECSNode) entry.getValue();
-            node.startKVServer(IECS.ZOOKEEPER_HOST, IECS.ZOOKEEPER_PORT);
+            node.startKVServer(IECS.ZOOKEEPER_HOST, IECS.ZOOKEEPER_PORT, this.debug);
             nodes.add(node);
         }
 
@@ -255,8 +258,10 @@ public class ECS implements IECS {
 
     private void initializeZooKeeper() {
         try {
-            ProcessBuilder zkProcessBuilder = new ProcessBuilder(IECS.ZOOKEEPER_SCRIPT_PATH, "restart", IECS.ZOOKEEPER_CONF_PATH)
-                    .inheritIO();
+            ProcessBuilder zkProcessBuilder = new ProcessBuilder(IECS.ZOOKEEPER_SCRIPT_PATH, "restart",
+                    IECS.ZOOKEEPER_CONF_PATH);
+            if (this.debug)
+                zkProcessBuilder.inheritIO();
             Process zkProcess = zkProcessBuilder.start();
             zkProcess.waitFor();
 

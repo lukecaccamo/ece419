@@ -17,5 +17,7 @@ done
 DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
 
 # Copy ssh key over with `ssh-copy-id user@host`
-ssh -n "$username"@"$host" kill -9 $(lsof -t -i:"$port") &> /dev/null
+{
+  ssh -n "$username"@"$host" kill -9 $(lsof -t -i:"$port") &> /dev/null
+} 2> /dev/null
 ssh -n "$username"@"$host" nohup java -jar "$DIR"/m3-server.jar "$name" "$port" "$zkHost" "$zkPort"

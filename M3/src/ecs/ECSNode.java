@@ -57,14 +57,16 @@ public class ECSNode implements IECSNode {
         this.om = new ObjectMapper();
     }
 
-    public boolean startKVServer(String zkHost, int zkPort) {
+    public boolean startKVServer(String zkHost, int zkPort, boolean debug) {
         if (this.flag != IECSNodeFlag.SHUT_DOWN)
             return false;
         String[] command = { SSH_SCRIPT_PATH, this.nodeName, this.nodeHost, Integer.toString(this.nodePort), zkHost,
                 Integer.toString(zkPort) };
 
         try {
-            ProcessBuilder kvServerProcessBuilder = new ProcessBuilder(command).inheritIO();
+            ProcessBuilder kvServerProcessBuilder = new ProcessBuilder(command);
+            if (debug)
+                kvServerProcessBuilder.inheritIO();
             Process kvServerProcess = kvServerProcessBuilder.start();
             this.flag = IECSNodeFlag.STOP;
         } catch (Exception e) {
