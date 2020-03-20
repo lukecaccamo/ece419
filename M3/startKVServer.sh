@@ -25,5 +25,5 @@ DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
 
 {
   ssh -n "$host" kill -9 $(lsof -t -i:"$port") &> /dev/null
-  ssh -n "$host" nohup java -jar "$DIR"/m2-server.jar "$name" "$zkHost" "$zkPort" "$port" "$cacheSize" "$cacheStrategy"
+  ssh -n "$host" nohup java -jar "$DIR"/m3-server.jar "$name" "$zkHost" "$zkPort" "$port" "$cacheSize" "$cacheStrategy"
 } 2> /dev/null

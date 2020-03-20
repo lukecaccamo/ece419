@@ -2,6 +2,9 @@
 .vs/
 
 # Compiled class file
+m3-client.jar
+m3-ecs.jar
+m3-server.jar
 *.class
 
 # Log file
