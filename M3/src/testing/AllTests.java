@@ -1,48 +1,69 @@
 package testing;
 
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.math.BigInteger;
+import java.util.ArrayList;
+import java.util.Properties;
+import java.util.TreeMap;
 
-import ecs.ECSNode;
 import org.apache.log4j.Level;
 
-import app_kvServer.KVServer;
+import app_kvServer.KVDatabase;
 import junit.framework.Test;
 import junit.framework.TestSuite;
 import logger.LogSetup;
-import shared.hashring.Hash;
-import shared.hashring.HashRing;
 
+import ecs.ECS;
 
 public class AllTests {
-
+	static final boolean DEBUG = true;
 	static {
 		try {
 			new LogSetup("logs/testing/test.log", Level.ERROR);
-			KVServer server = new KVServer(50000, 10, "FIFO");
-			server.start();
-
-			HashRing metadata = new HashRing();
-			ECSNode node = new ECSNode("Server1", server.getHostname(), server.getPort());
-
-			server.setServerHash(node.getHashKey());
-			metadata.addServer(node.getHashKey(), node);
-
-			server.setMetaData(metadata);
-
-		} catch (IOException e) {
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}
-	
-	
+
+	static ECS ecs = new ECS(AllTests.CONFIG_FILE_PATH, DEBUG);
+
+	static void resetDB() {
+		try {
+			InputStream configFile = new FileInputStream(AllTests.CONFIG_FILE_PATH);
+			Properties properties = new Properties();
+			properties.load(configFile);
+			configFile.close();
+			for (String key : properties.stringPropertyNames()) {
+				String[] value = properties.getProperty(key).split("\\s+");
+				String host = value[0];
+				String port = value[1];
+
+				File file = new File(KVDatabase.parseIndexFilePath(port));
+				file.delete();
+
+				file = new File(KVDatabase.parseDatabaseFilePath(port));
+				file.delete();
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
+	static final String CONFIG_FILE_PATH = "./ecs.config";
+
 	public static Test suite() {
-		TestSuite clientSuite = new TestSuite("Basic Storage ServerTest-Suite");
+		AllTests.ecs.start();
+		AllTests.resetDB();
+
+		TestSuite clientSuite = new TestSuite("Advanced Storage Server Test-Suite");
 		clientSuite.addTestSuite(ConnectionTest.class);
-		clientSuite.addTestSuite(InteractionTest.class); 
-		clientSuite.addTestSuite(AdditionalTest.class); 
-		clientSuite.addTestSuite(MultipleServersTest.class);
+		clientSuite.addTestSuite(InteractionTest.class);
+		clientSuite.addTestSuite(KVClientTest.class);
+		clientSuite.addTestSuite(ECSTest.class);
+		// clientSuite.addTestSuite(KVServerTest.class);
 		return clientSuite;
 	}
-	
 }

@@ -11,7 +11,7 @@ import shared.messages.KVMessage.StatusType;
 
 import java.io.File;
 
-public class AdditionalTest extends TestCase {
+public class KVServerTest extends TestCase {
 
 	private KVStore kvClient;
 	private KVServer kvServer;
@@ -26,8 +26,7 @@ public class AdditionalTest extends TestCase {
 	}
 
 	public void tearDown() {
-		kvClient.disconnect();
-		reset();
+		AllTests.resetDB();
 	}
 
 	public void reset() {
@@ -301,3 +300,71 @@ public class AdditionalTest extends TestCase {
 		assertEquals(KVMessage.StatusType.DELETE_SUCCESS, response.getStatus());
 	}
 }
+
+// @Test
+// public void testPersistence() {
+// KVServer kvServer = new KVServer(50001, 10, "FIFO");
+
+// String key = "foo2";
+// String value = "bar2";
+// String storedValue = null;
+// KVMessage message = null;
+// Exception ex = null;
+
+// try {
+// kvServer.putKV(key, value);
+// storedValue = kvServer.getKV(key);
+// } catch (Exception e) {
+// ex = e;
+// }
+// assertTrue(ex == null && storedValue == value);
+
+// kvServer.clearCache();
+// kvServer.kill();
+// kvServer = null;
+// storedValue = null;
+// System.gc();
+
+// kvServer = new KVServer(50001, 10, "FIFO");
+
+// try {
+// storedValue = kvServer.getKV(key);
+// } catch (Exception e) {
+// ex = e;
+// }
+
+// assertTrue(ex == null && storedValue.equals(value));
+// }
+
+// @Test
+// public void testPutGet() {
+// kvServer = new KVServer(50003, 2, "LFU");
+// String key = "foo2";
+// String key2 = "foo3";
+// String value = "bar2";
+// String value2 = "bar3";
+// String return_value = null;
+// boolean inCache = true;
+
+// try {
+// kvServer.putKV(key, value);
+// } catch (Exception e) {
+// e.printStackTrace();
+// }
+
+// try {
+// kvServer.putKV(key2, value2);
+// } catch (Exception e) {
+// e.printStackTrace();
+// }
+
+// inCache = kvServer.inCache(key);
+
+// try {
+// return_value = kvServer.getKV(key);
+// } catch (Exception e) {
+// e.printStackTrace();
+// }
+
+// assertTrue(return_value.equals(value) && inCache);
+// }

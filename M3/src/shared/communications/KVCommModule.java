@@ -3,7 +3,6 @@ package shared.communications;
 import app_kvServer.IKVServer;
 import app_kvServer.KVServer;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import ecs.IECSNode;
 import org.apache.log4j.Logger;
 import shared.exceptions.DeleteException;
 import shared.exceptions.GetException;

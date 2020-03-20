@@ -17,30 +17,41 @@ import java.util.concurrent.ConcurrentHashMap;
 // 1 byte for valid
 // 4 bytes for key length
 // 4 bytes for value length
-//
-public class KVDatabase {
 
+public class KVDatabase {
+    private static final String PROJECT_PATH = System.getProperty("user.home");
+    private static final String INDEX_FILE_PATH = ".txt";
+    private static final String DATABASE_FILE_PATH = ".db";
     private static Logger logger = Logger.getRootLogger();
 
-    private String indexFile = "index.txt";
-    private String databaseFile = "databaseFile.db";
+    private final String indexFile;
+    private final String databaseFile;
     private int port;
     // byte for valid, 4 bytes per lengths (ints)
     private Integer entryLength = 1 + 4 + 4 + 20 + 128000;
     private HashMap<String, Integer> index;
     private HashComparator hc;
 
+    public static String parseIndexFilePath(String port) {
+        return PROJECT_PATH + "/" + port + INDEX_FILE_PATH;
+    }
+
+    public static String parseDatabaseFilePath(String port) {
+        return PROJECT_PATH + "/" + port + DATABASE_FILE_PATH;
+    }
+
     public KVDatabase(int port) {
         this.port = port;
-        databaseFile = port + databaseFile;
-        indexFile = this.port + indexFile;
+        this.indexFile = parseIndexFilePath(Integer.toString(this.port));
+        this.databaseFile = parseDatabaseFilePath(Integer.toString(this.port));
+
         initDB();
         index = loadIndex();
         hc = new HashComparator();
     }
 
     public void initDB() {
-        File database = new File(databaseFile);
+        File database = new File(this.databaseFile);
         if (!database.exists()) {
             try {
                 database.createNewFile();
@@ -52,15 +63,14 @@ public class KVDatabase {
     }
 
     public HashMap<String, Integer> loadIndex() {
-        File tmp = new File(indexFile);
-        if (!tmp.exists()) {
+        File tmp = new File(this.indexFile);
+        if (!tmp.exists())
             // don't have to make new index file here because it is created in saveIndex
             return new HashMap<String, Integer>();
-        }
 
         HashMap<String, Integer> map = null;
         try {
-            FileInputStream fileIn = new FileInputStream(indexFile);
+            FileInputStream fileIn = new FileInputStream(this.indexFile);
             ObjectInputStream objectIn = new ObjectInputStream(fileIn);
             map = (HashMap<String, Integer>) objectIn.readObject();
             fileIn.close();
@@ -77,7 +87,6 @@ public class KVDatabase {
         return index.containsKey(key);
     }
 
-
     public String get(String key) throws IOException {
         Integer start = index.get(key);
         if (start != null) {
@@ -88,7 +97,7 @@ public class KVDatabase {
     }
 
     public String getValue(Integer start) throws IOException {
-        RandomAccessFile raf = new RandomAccessFile(databaseFile, "r");
+        RandomAccessFile raf = new RandomAccessFile(this.databaseFile, "r");
         raf.seek(start);
         boolean valid = raf.readBoolean();
         if (!valid) {
@@ -106,7 +115,7 @@ public class KVDatabase {
     }
 
     private void writeKV(Integer start, String key, String value) throws IOException {
-        RandomAccessFile raf = new RandomAccessFile(databaseFile, "rw");
+        RandomAccessFile raf = new RandomAccessFile(this.databaseFile, "rw");
         long indexLoc = 0;
         if (start == -1) {
             // new entry
@@ -150,7 +159,8 @@ public class KVDatabase {
         } else {
             // new entry
             try {
-                // can also start from beginning of file and loop through until find invalid block
+                // can also start from beginning of file and loop through until find invalid
+                // block
                 writeKV(-1, key, value);
             } catch (IOException e) {
                 this.logger.error("Error! Write to disk");
@@ -160,10 +170,9 @@ public class KVDatabase {
         saveIndex();
     }
 
-
     public boolean saveIndex() {
         try {
-            FileOutputStream fileOut = new FileOutputStream(indexFile, false);
+            FileOutputStream fileOut = new FileOutputStream(this.indexFile, false);
             ObjectOutputStream objectOut = new ObjectOutputStream(fileOut);
             objectOut.writeObject(index);
             objectOut.close();
@@ -176,19 +185,17 @@ public class KVDatabase {
     }
 
     public void clear() {
-        if (index != null) {
-            index.clear();
-        }
+        if (this.index != null)
+            this.index.clear();
 
-        File file = new File(databaseFile);
+        File file = new File(this.indexFile);
         file.delete();
 
-        file = new File(indexFile);
+        file = new File(this.databaseFile);
         file.delete();
 
         initDB();
-        index = loadIndex();
-
+        this.index = loadIndex();
     }
 
     public HashMap<String, String> moveData(String[] range) {

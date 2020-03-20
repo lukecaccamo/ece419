@@ -11,7 +11,6 @@ import org.apache.zookeeper.data.Stat;
 import java.util.concurrent.CountDownLatch;
 
 import ecs.IECS;
-import ecs.IECSNode;
 import ecs.IECSNode.IECSNodeFlag;
 import ecs.ECSNode;
 import shared.hashring.HashRing;
@@ -63,7 +62,7 @@ public class KVAdminCommModule implements Runnable {
 					}
 				}
 			};
-			this.zk = new ZooKeeper(this.zkHost + ":" + this.zkPort, 30000, watcher);
+			this.zk = new ZooKeeper(this.zkHost + ":" + this.zkPort, 10000, watcher);
 			this.connected.await();
 			this.zk.create(zkNodeName, null, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
 		} catch (IOException | KeeperException | InterruptedException e) {
@@ -94,13 +93,16 @@ public class KVAdminCommModule implements Runnable {
 	private KVAdminMessage getNextState() {
 		try {
 			Stat zkStat = this.zk.exists(zkNodeName, false);
-			byte[] jsonBytes = this.zk.getData(zkNodeName, null, zkStat);
+			if (zkStat == null)
+				return null;
 
-			if (jsonBytes != null) {
-				String json = new String(jsonBytes).trim();
-				if (!this.state.equals(json))
-					return this.om.readValue(json, KVAdminMessage.class);
-			}
+			byte[] jsonBytes = this.zk.getData(zkNodeName, null, zkStat);
+			if (jsonBytes == null)
+				return null;
+
+			String json = new String(jsonBytes).trim();
+			if (!this.state.equals(json))
+				return this.om.readValue(json, KVAdminMessage.class);
 		} catch (JsonProcessingException | KeeperException | InterruptedException e) {
 			this.logger.error(e);
 			e.printStackTrace();
@@ -111,7 +113,7 @@ public class KVAdminCommModule implements Runnable {
 	private String setNextState(KVAdminMessage nextState) {
 		String key = nextState.getHashKey();
 		HashRing metadata = nextState.getMetaData();
-		IECSNode node = metadata.getHashRing().get(key);
+		ECSNode node = metadata.getHashRing().get(key);
 
 		switch (nextState.getAction()) {
 			case INIT:
@@ -131,12 +133,11 @@ public class KVAdminCommModule implements Runnable {
 				nextState.setAction(ActionType.STOP_ACK);
 				break;
 			case SHUTDOWN:
-				node = new ECSNode(this.nodeName, this.nodeHost, this.nodePort);
 				metadata.removeServer(key);
+				node = new ECSNode(this.nodeName, this.nodeHost, this.nodePort);
 				metadata.addServer(key, node);
 				nextState.setMetaData(metadata);
 				nextState.setAction(ActionType.SHUTDOWN_ACK);
-				this.server.shutDown();
 				break;
 			case LOCK_WRITE:
 				this.server.lockWrite();
@@ -178,6 +179,8 @@ public class KVAdminCommModule implements Runnable {
 			String json = this.om.writeValueAsString(nextState).trim();
 			byte[] jsonBytes = KVCommModule.toByteArray(json);
 			this.zk.setData(zkNodeName, jsonBytes, zkStat.getVersion());
+			if (nextState.getAction().equals(ActionType.SHUTDOWN_ACK))
+				this.server.shutDown();
 			return json;
 		} catch (JsonProcessingException | KeeperException | InterruptedException e) {
 			this.logger.error(e);

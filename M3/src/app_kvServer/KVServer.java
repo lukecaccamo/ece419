@@ -7,7 +7,7 @@ import app_kvServer.KVCache.LRUCache;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import ecs.IECSNode;
+import ecs.ECSNode;
 import logger.LogSetup;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
@@ -192,7 +192,7 @@ public class KVServer implements IKVServer, Runnable {
 			e.printStackTrace();
 		}
 
-		IECSNode dest = this.metadata.getServer(serverKey);
+		ECSNode dest = this.metadata.getServer(serverKey);
 		connectToServer(dest.getNodeHost(), dest.getNodePort());
 
 		this.serverConnection.sendKVMessage(KVMessage.StatusType.MOVE_VALUES, range[0], dataJSON);
@@ -229,7 +229,7 @@ public class KVServer implements IKVServer, Runnable {
 
 	public boolean inServer(String key) {
 		String keyHash = Hash.MD5(key);
-		IECSNode test = this.metadata.serverLookup(keyHash);
+		ECSNode test = this.metadata.serverLookup(keyHash);
 		return this.metadata.inServer(keyHash, this.serverHash);
 	}
 
@@ -346,6 +346,7 @@ public class KVServer implements IKVServer, Runnable {
 			}
 		}
 		logger.info("Server stopped.");
+		System.exit(1);
 	}
 
 	@Override
@@ -363,6 +364,7 @@ public class KVServer implements IKVServer, Runnable {
 		this.running = false;
 		if (this.adminConnection != null)
 			this.adminConnection.close();
+		System.exit(1);
 	}
 
 	/**

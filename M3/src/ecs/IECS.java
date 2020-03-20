@@ -14,7 +14,7 @@ public interface IECS {
     public static final String ZOOKEEPER_CONF_PATH = ZOOKEEPER_PATH + "/conf/zoo_sample.cfg";
 
     public static final String DEFAULT_CACHE_STRATEGY = "FIFO";
-    public static final int DEFAULT_CACHE_SIZE = 1;
+    public static final int DEFAULT_CACHE_SIZE = 0;
 
     /**
      * Starts the storage service by calling start() on all KVServer instances that participate in the service.\

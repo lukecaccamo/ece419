@@ -5,25 +5,30 @@ import shared.hashring.HashRing;
 import java.io.Serializable;
 
 /**
- * Represents a KV Admin message, which is intended to be received and sent
- * by the ECS and the server.
+ * Represents a KV Admin message, which is intended to be received and sent by
+ * the ECS and the server.
  */
 public class KVAdminMessage implements Serializable, IKVAdminMessage {
 
 	private ActionType action;
 	private String hashKey;
-    private HashRing metadata = null;
+	private HashRing hashRing;
 
 	public KVAdminMessage() {
 		this.action = null;
 		this.hashKey = null;
-		this.metadata = null;
+		this.hashRing = null;
 	}
 
 	public KVAdminMessage(ActionType action, String hashKey, HashRing hashRing) {
 		this.action = action;
 		this.hashKey = hashKey;
-		this.metadata = hashRing;
+		this.hashRing = hashRing;
+	}
+
+	public String toString() {
+		return String.format("\taction: %s\n\thashKey: %s\n\thashRing: %s", this.action.toString(),
+				this.hashKey.toString(), this.hashRing.toString());
 	}
 
 	// Set
@@ -36,9 +41,8 @@ public class KVAdminMessage implements Serializable, IKVAdminMessage {
 	}
 
 	public void setMetaData(HashRing hashRing) {
-		this.metadata = hashRing;
+		this.hashRing = hashRing;
 	}
-
 
 	// Get
 	public ActionType getAction() {
@@ -50,6 +54,6 @@ public class KVAdminMessage implements Serializable, IKVAdminMessage {
 	}
 
 	public HashRing getMetaData() {
-		return metadata;
+		return hashRing;
 	}
 }

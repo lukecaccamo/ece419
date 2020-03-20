@@ -169,22 +169,15 @@ public class ECSClient implements IECSClient {
 
     private void printUsedServers() {
         this.prompt.printPrimary("UsedServers:");
-        for (Map.Entry<String, IECSNode> e : this.getNodes().entrySet()) {
-            IECSNode node = e.getValue();
-            String str = String.format("\t%s(%s:%d) flag: %s range: (%s,%s) cache: %s(%d)", node.getNodeName(),
-                    node.getNodeHost(), node.getNodePort(), node.getFlag().toString(), node.getNodeHashRange()[0],
-                    node.getNodeHashRange()[1], node.getCacheStrategy().toString(), node.getCacheSize());
-            this.prompt.printPrimary(str);
+        for (ECSNode node : this.ecs.usedServers.getHashRing().values()) {
+            this.prompt.printPrimary(node.toString());
         }
     }
 
     private void printFreeServers() {
         this.prompt.printSecondary("FreeServers:");
-        for (IECSNode node : this.ecs.freeServers) {
-            String str = String.format("\t%s(%s:%d) flag: %s range: (%s,%s) cache: %s(%d)", node.getNodeName(),
-                    node.getNodeHost(), node.getNodePort(), node.getFlag().toString(), node.getNodeHashRange()[0],
-                    node.getNodeHashRange()[1], node.getCacheStrategy().toString(), node.getCacheSize());
-            this.prompt.printSecondary(str);
+        for (ECSNode node : this.ecs.freeServers) {
+            this.prompt.printSecondary(node.toString());
         }
     }
 
