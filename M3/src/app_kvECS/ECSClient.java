@@ -17,19 +17,13 @@ import logger.LogSetup;
 import ecs.ECS;
 import ecs.ECSNode;
 import ecs.IECSNode;
+import shared.Prompt;
+import shared.Prompt.*;
 
 public class ECSClient implements IECSClient {
-    public static final String ANSI_BOLD = "\u001B[1m";
-    public static final String ANSI_RESET = "\u001B[0m";
-    public static final String ANSI_CYAN = "\u001B[36m";
-    public static final String ANSI_BLUE = "\u001B[34m";
-    public static final String ANSI_PURPLE = "\u001B[35m";
-    public static final String ANSI_RED = "\u001B[31m";
-    public static final String ANSI_WHITE = "\u001B[37m";
-    private static final String PROMPT =
-            ANSI_BOLD + ANSI_CYAN + "ECS " + ANSI_WHITE + "% " + ANSI_RESET;
-    private static Logger logger;
 
+    private static Logger logger;
+    private Prompt prompt = new Prompt("ECSAdmin");
     private BufferedReader stdin;
     private boolean stop = false;
     private ECS ecs;
@@ -44,14 +38,14 @@ public class ECSClient implements IECSClient {
         this.printFreeServers();
         while (!this.stop) {
             this.stdin = new BufferedReader(new InputStreamReader(System.in));
-            System.out.print(PROMPT);
+            this.prompt.print();
 
             try {
                 String cmdLine = this.stdin.readLine();
                 this.handleCommand(cmdLine);
             } catch (IOException e) {
                 this.stop = true;
-                printError("CLI does not respond - Application terminated ");
+                this.prompt.printError("CLI does not respond - Application terminated ");
             } catch (Exception e) {
                 this.logger.error(e);
                 e.printStackTrace();
@@ -66,19 +60,13 @@ public class ECSClient implements IECSClient {
             case "quit":
                 this.stop = true;
                 this.shutdown();
-                this.printUsedServers();
-                this.printFreeServers();
-                printInfo("Stopped all server instances!");
+                this.prompt.printPrimary("Stopped all server instances!");
                 break;
             case "start":
                 this.start();
-                this.printUsedServers();
-                this.printFreeServers();
                 break;
             case "stop":
                 this.stop();
-                this.printUsedServers();
-                this.printFreeServers();
                 break;
             case "add":
                 if (tokens.length == 3) {
@@ -91,10 +79,8 @@ public class ECSClient implements IECSClient {
                     int cacheSize = Integer.parseInt(tokens[3]);
                     this.addNodes(count, cacheStrategy, cacheSize);
                 } else {
-                    printError("Invalid number of parameters!");
+                    this.prompt.printError("Invalid number of parameters!");
                 }
-                this.printUsedServers();
-                this.printFreeServers();
                 break;
             case "remove":
                 if (tokens.length == 2) {
@@ -103,36 +89,37 @@ public class ECSClient implements IECSClient {
                     nodeNames.add(nodeName);
                     this.removeNodes(nodeNames);
                 } else {
-                    printError("Invalid number of parameters!");
+                    this.prompt.printError("Invalid number of parameters!");
                 }
-                this.printUsedServers();
-                this.printFreeServers();
                 break;
             case "logLevel":
                 if (tokens.length == 2) {
                     String level = setLevel(tokens[1]);
                     if (level.equals(LogSetup.UNKNOWN_LEVEL)) {
-                        printError("No valid log level!");
-                        this.printPossibleLogLevels();
+                        this.prompt.printError("No valid log level!");
+                        this.prompt.printPossibleLogLevels();
                     } else {
-                        printInfo("Log level changed to level " + level);
+                        this.prompt.printPrimary("Log level changed to level " + level);
                     }
                 } else {
-                    printError("Invalid number of parameters!");
+                    this.prompt.printError("Invalid number of parameters!");
                 }
                 break;
             case "help":
                 this.printHelp();
                 break;
             default:
-                printError("Unknown command");
+                this.prompt.printError("Unknown command");
                 this.printHelp();
         }
+
+        this.printUsedServers();
+        this.printFreeServers();
     }
 
     /**
-     * Starts the storage service by calling start() on all KVServer instances that participate in
-     * the service.\
+     * Starts the storage service by calling start() on all KVServer instances that
+     * participate in the service.\
      * 
      * @throws Exception some meaningfull exception on failure
      * @return true on success, false on failure
@@ -143,8 +130,8 @@ public class ECSClient implements IECSClient {
     }
 
     /**
-     * Stops the service; all participating KVServers are stopped for processing client requests but
-     * the processes remain running.
+     * Stops the service; all participating KVServers are stopped for processing
+     * client requests but the processes remain running.
      * 
      * @throws Exception some meaningfull exception on failure
      * @return true on success, false on failure
@@ -166,8 +153,8 @@ public class ECSClient implements IECSClient {
     }
 
     /**
-     * Create a new KVServer with the specified cache size and replacement strategy and add it to
-     * the storage service at an arbitrary position.
+     * Create a new KVServer with the specified cache size and replacement strategy
+     * and add it to the storage service at an arbitrary position.
      * 
      * @return name of new server
      */
@@ -177,12 +164,14 @@ public class ECSClient implements IECSClient {
     }
 
     /**
-     * Randomly choose <numberOfNodes> servers from the available machines and start the KVServer by
-     * issuing an SSH call to the respective machine. This call launches the storage server with the
-     * specified cache size and replacement strategy. For simplicity, locate the KVServer.jar in the
-     * same directory as the ECS. All storage servers are initialized with the metadata and any
-     * persisted data, and remain in state stopped. NOTE: Must call setupNodes before the SSH calls
-     * to start the servers and must call awaitNodes before returning
+     * Randomly choose <numberOfNodes> servers from the available machines and start
+     * the KVServer by issuing an SSH call to the respective machine. This call
+     * launches the storage server with the specified cache size and replacement
+     * strategy. For simplicity, locate the KVServer.jar in the same directory as
+     * the ECS. All storage servers are initialized with the metadata and any
+     * persisted data, and remain in state stopped. NOTE: Must call setupNodes
+     * before the SSH calls to start the servers and must call awaitNodes before
+     * returning
      * 
      * @return set of strings containing the names of the nodes
      */
@@ -241,73 +230,62 @@ public class ECSClient implements IECSClient {
     }
 
     private void printUsedServers() {
-        printInfo("UsedServers:");
+        this.prompt.printPrimary("UsedServers:");
         for (Map.Entry<String, IECSNode> e : this.getNodes().entrySet()) {
             IECSNode node = e.getValue();
-            String str = String.format("\t%s(%s:%d) flag: %s range: (%s,%s) cache: %s(%d)",
-                    node.getNodeName(), node.getNodeHost(), node.getNodePort(),
-                    node.getFlag().toString(), node.getNodeHashRange()[0],
-                    node.getNodeHashRange()[1], node.getCacheStrategy().toString(),
-                    node.getCacheSize());
-            printInfo(str);
+            String str = String.format("\t%s(%s:%d) flag: %s range: (%s,%s) cache: %s(%d)", node.getNodeName(),
+                    node.getNodeHost(), node.getNodePort(), node.getFlag().toString(), node.getNodeHashRange()[0],
+                    node.getNodeHashRange()[1], node.getCacheStrategy().toString(), node.getCacheSize());
+            this.prompt.printPrimary(str);
         }
     }
 
     private void printFreeServers() {
-        printInfoSecondary("FreeServers:");
+        this.prompt.printSecondary("FreeServers:");
         for (IECSNode node : this.ecs.freeServers) {
-            String str = String.format("\t%s(%s:%d) flag: %s range: (%s,%s) cache: %s(%d)",
-                    node.getNodeName(), node.getNodeHost(), node.getNodePort(),
-                    node.getFlag().toString(), node.getNodeHashRange()[0],
-                    node.getNodeHashRange()[1], node.getCacheStrategy().toString(),
-                    node.getCacheSize());
-            printInfoSecondary(str);
+            String str = String.format("\t%s(%s:%d) flag: %s range: (%s,%s) cache: %s(%d)", node.getNodeName(),
+                    node.getNodeHost(), node.getNodePort(), node.getFlag().toString(), node.getNodeHashRange()[0],
+                    node.getNodeHashRange()[1], node.getCacheStrategy().toString(), node.getCacheSize());
+            this.prompt.printSecondary(str);
         }
     }
 
     private void printHelp() {
         StringBuilder sb = new StringBuilder();
-        sb.append(PROMPT + "\n");
+        sb.append(this.prompt.get() + "\n");
 
-        sb.append(PROMPT).append(ANSI_BOLD + ANSI_BLUE + "ECS CLIENT HELP (Usage):\n" + ANSI_RESET);
+        sb.append(this.prompt.get()).append(Prompt.ANSI_BOLD + Prompt.ANSI_BLUE + "ECS CLIENT HELP (Usage):\n" + Prompt.ANSI_RESET);
 
-        sb.append(PROMPT).append(ANSI_BOLD + "start" + ANSI_RESET);
-        sb.append(
-                "\t\t\t starts the storage service on all KVServer instances that participate \n");
+        sb.append(this.prompt.get()).append(Prompt.ANSI_BOLD + "start" + Prompt.ANSI_RESET);
+        sb.append("\t\t\t starts the storage service on all KVServer instances that participate \n");
 
-        sb.append(PROMPT).append(ANSI_BOLD + "stop" + ANSI_RESET);
+        sb.append(this.prompt.get()).append(Prompt.ANSI_BOLD + "stop" + Prompt.ANSI_RESET);
         sb.append(
                 "\t\t\t all participating KVServers are stopped for processing client requests but the processes remain running \n");
 
-        sb.append(PROMPT).append(ANSI_BOLD + "add " + ANSI_BLUE + "<strategy> <size>" + ANSI_RESET);
-        sb.append("\t choose a server from available machines and start it with cache options "
-                + ANSI_BLUE + "<strategy> " + ANSI_RESET + "and " + ANSI_BLUE + "<size> \n");
+        sb.append(this.prompt.get()).append(Prompt.ANSI_BOLD + "add " + Prompt.ANSI_BLUE + "<strategy> <size>" + Prompt.ANSI_RESET);
+        sb.append("\t choose a server from available machines and start it with cache options " + Prompt.ANSI_BLUE
+                + "<strategy> " + Prompt.ANSI_RESET + "and " + Prompt.ANSI_BLUE + "<size> \n");
 
-        sb.append(PROMPT)
-                .append(ANSI_BOLD + "add " + ANSI_BLUE + "<m> <strategy> <size>" + ANSI_RESET);
-        sb.append("\t choose " + ANSI_BLUE + "<m> " + ANSI_RESET
-                + "servers from available machines and start them with cache options " + ANSI_BLUE
-                + "<strategy> " + ANSI_RESET + "and " + ANSI_BLUE + "<size> \n");
+        sb.append(this.prompt.get()).append(Prompt.ANSI_BOLD + "add " + Prompt.ANSI_BLUE + "<m> <strategy> <size>" + Prompt.ANSI_RESET);
+        sb.append("\t choose " + Prompt.ANSI_BLUE + "<m> " + Prompt.ANSI_RESET
+                + "servers from available machines and start them with cache options " + Prompt.ANSI_BLUE + "<strategy> "
+                + Prompt.ANSI_RESET + "and " + Prompt.ANSI_BLUE + "<size> \n");
 
-        sb.append(PROMPT).append(ANSI_BOLD + "remove " + ANSI_BLUE + "<name>" + ANSI_RESET);
-        sb.append("\t\t remove a server from the storage service with name " + ANSI_BLUE + "<name>"
-                + ANSI_RESET + "\n");
+        sb.append(this.prompt.get()).append(Prompt.ANSI_BOLD + "remove " + Prompt.ANSI_BLUE + "<name>" + Prompt.ANSI_RESET);
+        sb.append(
+                "\t\t remove a server from the storage service with name " + Prompt.ANSI_BLUE + "<name>" + Prompt.ANSI_RESET + "\n");
 
-        sb.append(PROMPT).append(ANSI_BOLD + "logLevel" + ANSI_RESET);
+        sb.append(this.prompt.get()).append(Prompt.ANSI_BOLD + "logLevel" + Prompt.ANSI_RESET);
         sb.append("\t\t\t changes the logLevel: \n");
-        sb.append(PROMPT).append("\t\t\t\t ");
-        sb.append(ANSI_BLUE + "ALL | DEBUG | INFO | WARN | ERROR | FATAL | OFF \n" + ANSI_RESET);
+        sb.append(this.prompt.get()).append("\t\t\t\t ");
+        sb.append(Prompt.ANSI_BLUE + "ALL | DEBUG | INFO | WARN | ERROR | FATAL | OFF \n" + Prompt.ANSI_RESET);
 
-        sb.append(PROMPT).append(ANSI_BOLD + "quit " + ANSI_RESET);
+        sb.append(this.prompt.get()).append(Prompt.ANSI_BOLD + "quit " + Prompt.ANSI_RESET);
         sb.append("\t\t\t exits the program \n");
 
-        sb.append(PROMPT);
+        sb.append(this.prompt.get());
         System.out.println(sb.toString());
-    }
-
-    private void printPossibleLogLevels() {
-        System.out.println(PROMPT + "Possible log levels are:");
-        System.out.println(PROMPT + "ALL | DEBUG | INFO | WARN | ERROR | FATAL | OFF");
     }
 
     private String setLevel(String levelString) {
@@ -338,21 +316,9 @@ public class ECSClient implements IECSClient {
         }
     }
 
-    private void printInfo(String info) {
-        System.out.println(PROMPT + ANSI_BOLD + ANSI_BLUE + info + ANSI_RESET);
-    }
-
-    private void printInfoSecondary(String info) {
-        System.out.println(PROMPT + ANSI_BOLD + ANSI_PURPLE + info + ANSI_RESET);
-    }
-
-    private void printError(String error) {
-        System.out.println(PROMPT + ANSI_BOLD + ANSI_RED + "Error! " + error + ANSI_RESET);
-    }
-
     public static void main(String[] args) {
         try {
-            new LogSetup("logs/ecs.log", Level.ERROR);
+            new LogSetup("logs/ecs.log", Level.WARN);
             if (args.length != 1) {
                 System.out.println("Error! Invalid number of arguments!");
                 System.out.println("Usage: ECS <configFilePath>");
