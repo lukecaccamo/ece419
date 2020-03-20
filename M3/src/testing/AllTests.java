@@ -22,13 +22,13 @@ public class AllTests {
 			KVServer server = new KVServer(50000, 10, "FIFO");
 			server.start();
 
-			HashRing metaData = new HashRing();
-			ECSNode node = new ECSNode("Server1", server.getHost(), server.getPort());
+			HashRing metadata = new HashRing();
+			ECSNode node = new ECSNode("Server1", server.getHostname(), server.getPort());
 
 			server.setServerHash(node.getHashKey());
-			metaData.addServer(node.getHashKey(), node);
+			metadata.addServer(node.getHashKey(), node);
 
-			server.updateMetaData(metaData);
+			server.setMetaData(metadata);
 
 		} catch (IOException e) {
 			e.printStackTrace();

@@ -29,111 +29,118 @@ public class KVServer implements IKVServer, Runnable {
 
 	private static Logger logger = Logger.getRootLogger();
 
-	private String name;
-	private String zkHost;
-	private int zkPort;
-
+	private boolean running;
 	private String host;
 	private int port;
-	private String strategy;
 	private int cacheSize;
+	private String cacheStrategy;
 	private ServerSocket serverSocket;
-	private boolean running;
-	private boolean writeLock;
-	private ServerStateType serverStateType;
+	private KVCommModule serverConnection;
 	private IKVCache cache;
-	private KVDatabase db;
-	private HashRing metaData;
-	private String serverHash;
+	private KVDatabase database;
 	private ObjectMapper om;
 	private static final String DELETE_VAL = "null";
-	private KVCommModule serverConnection;
 
-	private KVAdminCommModule adminCommModule;
+	private String zkHost;
+	private int zkPort;
+	private String serverName;
+	private String serverHash;
+	private ServerStateType serverStateType;
+	private HashRing metadata;
+	private boolean writeLock;
+	private KVAdminCommModule adminConnection;
 
 	/**
 	 * Start KV Server at given port
 	 * 
-	 * @param port      given port for storage server to operate
-	 * @param cacheSize specifies how many key-value pairs the server is allowed to keep in-memory
-	 * @param strategy  specifies the cache replacement strategy in case the cache is full and there
-	 *                  is a GET- or PUT-request on a key that is currently not contained in the
-	 *                  cache. Options are "FIFO", "LRU", and "LFU".
+	 * @param port          given port for storage server to operate
+	 * @param cacheSize     specifies how many key-value pairs the server is allowed
+	 *                      to keep in-memory
+	 * @param cacheStrategy specifies the cache replacement strategy in case the
+	 *                      cache is full and there is a GET- or PUT-request on a
+	 *                      key that is currently not contained in the cache.
+	 *                      Options are "FIFO", "LRU", and "LFU".
 	 */
-	public KVServer(int port, int cacheSize, String strategy) {
-
+	public KVServer(int port, int cacheSize, String cacheStrategy) {
+		this.host = "";
 		this.port = port;
 		this.cacheSize = cacheSize;
-		this.strategy = strategy;
-		this.serverStateType = ServerStateType.STOPPED;
-		this.writeLock = false;
-		this.host = "";
+		this.cacheStrategy = cacheStrategy;
 
 		try {
 			InetAddress localhost = InetAddress.getLocalHost();
 			this.host = (localhost.getHostAddress()).trim();
 		} catch (UnknownHostException e) {
+			this.logger.error(e);
 			e.printStackTrace();
 		}
 
 		this.om = new ObjectMapper();
 
-		assignCache(strategy);
+		this.database = new KVDatabase(this.port);
 
-		db = new KVDatabase(this.port);
-		new Thread(this).start();
+		initializeServer(null, null, cacheSize, CacheStrategy.valueOf(cacheStrategy));
 	}
 
 	/**
 	 * Start KV Server at given port w/ ZooKeeper
 	 * 
-	 * @param name      given name for this server
-	 * @param zkHost    given IP for ZooKeeper to operate
-	 * @param zkPort    given port for ZooKeeper to operate
-	 * @param port      given port for storage server to operate
-	 * @param cacheSize specifies how many key-value pairs the server is allowed to keep in-memory
-	 * @param strategy  specifies the cache replacement strategy in case the cache is full and there
-	 *                  is a GET- or PUT-request on a key that is currently not contained in the
-	 *                  cache. Options are "FIFO", "LRU", and "LFU".
+	 * @param serverName given serverName for this server
+	 * @param port       given port for storage server to operate
+	 * @param zkHost     given IP for ZooKeeper to operate
+	 * @param zkPort     given port for ZooKeeper to operate
 	 */
-	public KVServer(String name, String zkHost, int zkPort, int port, int cacheSize,
-			String strategy) {
-
-		this.name = name;
+	public KVServer(String serverName, int port, String zkHost, int zkPort) {
+		this.serverName = serverName;
+		this.host = "";
+		this.port = port;
 		this.zkHost = zkHost;
 		this.zkPort = zkPort;
-
-		this.port = port;
-		this.cacheSize = cacheSize;
-		this.strategy = strategy;
-		this.serverStateType = ServerStateType.STOPPED;
-		this.writeLock = false;
-		this.host = "";
 
 		try {
 			InetAddress localhost = InetAddress.getLocalHost();
 			this.host = (localhost.getHostAddress()).trim();
 		} catch (UnknownHostException e) {
+			this.logger.error(e);
 			e.printStackTrace();
 		}
 
 		this.om = new ObjectMapper();
 
-		assignCache(strategy);
+		this.database = new KVDatabase(this.port);
 
-		db = new KVDatabase(this.port);
+		this.serverStateType = ServerStateType.STOPPED;
+		this.writeLock = false;
 
-		this.adminCommModule = new KVAdminCommModule(name, zkHost, zkPort, this);
-		new Thread(this.adminCommModule).start();
-
-		new Thread(this).start();
+		this.adminConnection = new KVAdminCommModule(serverName, zkHost, zkPort, this);
+		new Thread(this.adminConnection).start();
 	}
 
-	public void initKVServer(HashRing metaData, int cacheSize, CacheStrategy replacementStrategy) {
-		this.metaData = metaData;
-		this.cacheSize = cacheSize;
+	public void initializeServer(String key, HashRing metadata, int cacheSize, CacheStrategy cacheStrategy) {
+		this.serverHash = key;
+		this.metadata = metadata;
 		this.serverStateType = ServerStateType.STOPPED;
-		assignCache(replacementStrategy.toString());
+		this.writeLock = false;
+
+		switch (cacheStrategy) {
+			case LRU:
+				this.cache = new LRUCache(this.cacheSize);
+			case FIFO:
+				this.cache = new FIFOCache(this.cacheSize);
+			case LFU:
+				this.cache = new LFUCache(this.cacheSize);
+			case None:
+				break;
+			default:
+				System.out.println("Error! Invalid <cacheStrategy>!");
+				System.exit(1);
+				break;
+		}
+		this.cacheSize = cacheSize;
+		this.cacheStrategy = cacheStrategy.toString();
+
+		if (!this.running)
+			new Thread(this).start();
 	}
 
 	public ServerStateType getServerState() {
@@ -153,108 +160,88 @@ public class KVServer implements IKVServer, Runnable {
 		close();
 	}
 
-	// shit code for dirty testing
-	public void setServerHash(String serverHash) {
-		this.serverHash = serverHash;
-	}
-
 	public String getServerHash() {
 		return this.serverHash;
 	}
 
-	public String getHost() {
-		return this.host;
+	public void setServerHash(String serverHash) {
+		this.serverHash = serverHash;
 	}
 
 	public HashRing getMetaData() {
-		return this.metaData;
+		return this.metadata;
 	}
 
-	public void updateMetaData(HashRing metaData) {
-		this.metaData = metaData;
-	}
-
-	private void connectToServer(String serverAddress, int serverPort) throws Exception{
-		Socket socket = new Socket(serverAddress, serverPort);
-		this.serverConnection = new KVCommModule(socket, null);
-		this.serverConnection.connect();
-	}
-
-	private void disconnectFromServer(){
-		this.serverConnection.disconnect();
+	public void setMetaData(HashRing metadata) {
+		this.metadata = metadata;
 	}
 
 	public void moveData(String[] range, String serverKey) throws Exception {
-		HashMap<String, String> movingData = db.moveData(range);
+		HashMap<String, String> movingData = this.database.moveData(range);
 		String dataJSON = "";
 		try {
 			dataJSON = om.writeValueAsString(movingData);
 		} catch (JsonProcessingException e) {
+			this.logger.error(e);
 			e.printStackTrace();
 		}
 
-		IECSNode dest = this.metaData.getServer(serverKey);
-		// connect to other server, send dataJSON as value
+		IECSNode dest = this.metadata.getServer(serverKey);
 		connectToServer(dest.getNodeHost(), dest.getNodePort());
 
 		this.serverConnection.sendKVMessage(KVMessage.StatusType.MOVE_VALUES, range[0], dataJSON);
 
 		KVSimpleMessage returnMsg = this.serverConnection.receiveKVMessage();
 		if (returnMsg.getStatus() == KVMessage.StatusType.MOVE_VALUES_DONE) {
-			db.deleteMovedData(movingData);
-			// TOOD: SEND MESSAGE TO ECS THAT IT'S DONE TRANSFERRING
+			this.database.deleteMovedData(movingData);
 		}
-		// receive msg from server that its done, delete data in movingData
 		disconnectFromServer();
 	}
 
-	public void receiveData (String newDataJSON){
+	public void receiveData(String newDataJSON) {
 		HashMap<String, String> newData = null;
 		try {
 			newData = om.readValue(newDataJSON, HashMap.class);
 		} catch (JsonProcessingException e) {
+			this.logger.error(e);
 			e.printStackTrace();
 		}
-		db.receiveData(newData);
+		this.database.receiveData(newData);
 	}
 
 	public void lockWrite() {
-		writeLock = true;
+		this.writeLock = true;
 	}
 
 	public void unlockWrite() {
-		writeLock = false;
+		this.writeLock = false;
 	}
 
 	public boolean isWriterLocked() {
-		return writeLock;
+		return this.writeLock;
 	}
 
 	public boolean inServer(String key) {
 		String keyHash = Hash.MD5(key);
-		IECSNode test = this.metaData.serverLookup(keyHash);
-		return this.metaData.inServer(keyHash, this.serverHash);
+		IECSNode test = this.metadata.serverLookup(keyHash);
+		return this.metadata.inServer(keyHash, this.serverHash);
 	}
-
-	// M1
 
 	@Override
 	public int getPort() {
 		int port = 0;
 
-		if (serverSocket != null) {
-			port = serverSocket.getLocalPort();
-		}
+		if (this.serverSocket != null)
+			port = this.serverSocket.getLocalPort();
 
 		return port;
 	}
 
 	@Override
 	public String getHostname() {
-
 		String host = null;
 
-		if (serverSocket != null)
+		if (this.serverSocket != null)
 			host = serverSocket.getInetAddress().getHostName();
 
 		return host;
@@ -262,7 +249,7 @@ public class KVServer implements IKVServer, Runnable {
 
 	@Override
 	public CacheStrategy getCacheStrategy() {
-		return CacheStrategy.valueOf(this.strategy);
+		return CacheStrategy.valueOf(this.cacheStrategy);
 	}
 
 	@Override
@@ -272,53 +259,47 @@ public class KVServer implements IKVServer, Runnable {
 
 	@Override
 	public boolean inStorage(String key) {
-		return db.inStorage(key);
+		return this.database.inStorage(key);
 	}
 
 	@Override
 	public boolean inCache(String key) {
-		if (getCacheStrategy() == CacheStrategy.None) {
+		if (getCacheStrategy() == CacheStrategy.None)
 			return false;
-		}
-		return cache.inCache(key);
+
+		return this.cache.inCache(key);
 	}
 
 	@Override
 	public String getKV(String key) throws Exception {
-
 		try {
 			if (getCacheStrategy() != CacheStrategy.None) {
-				String cache_return = cache.get(key);
-				if (cache_return != null) {
-
-					return cache_return;
-				}
+				String cacheReturn = this.cache.get(key);
+				if (cacheReturn != null)
+					return cacheReturn;
 			}
 
-			String db_return = db.get(key);
-			if (db_return != null && getCacheStrategy() != CacheStrategy.None) {
-				cache.put(key, db_return);
-			}
+			String dbReturn = this.database.get(key);
+			if (dbReturn != null && getCacheStrategy() != CacheStrategy.None)
+				this.cache.put(key, dbReturn);
 
-			return db_return;
+			return dbReturn;
 
-		} catch (Exception ex) {
+		} catch (Exception e) {
+			e.printStackTrace();
 			throw new GetException(key, "GET failed unexpectedly!");
 		}
 	}
 
 	@Override
 	public void putKV(String key, String value) throws Exception {
-
 		try {
+			if (getCacheStrategy() != CacheStrategy.None)
+				this.cache.put(key, value);
 
-			if (getCacheStrategy() != CacheStrategy.None) {
-				cache.put(key, value);
-			}
-
-
-			db.put(key, value);
-		} catch (Exception ex) {
+			this.database.put(key, value);
+		} catch (Exception e) {
+			e.printStackTrace();
 			if (value.equals(DELETE_VAL)) {
 				throw new DeleteException(key, "DELETE failed unexpectedly!");
 			} else {
@@ -329,34 +310,28 @@ public class KVServer implements IKVServer, Runnable {
 
 	@Override
 	public void clearCache() {
-		if (getCacheStrategy() != CacheStrategy.None) {
-			cache.clear();
-		}
+		if (getCacheStrategy() != CacheStrategy.None)
+			this.cache.clear();
 	}
 
 	@Override
 	public void clearStorage() {
-
-		if (getCacheStrategy() != CacheStrategy.None) {
-			cache.clear();
-		}
-
-		db.clear();
+		if (getCacheStrategy() != CacheStrategy.None)
+			this.cache.clear();
+		this.database.clear();
 	}
 
 	@Override
 	public void run() {
-
-		running = initializeServer();
-
+		initializeConnection();
 		if (this.serverSocket != null) {
 			try {
-				while (isRunning()) {
+				while (this.running) {
 					Socket client = this.serverSocket.accept();
 					KVCommModule connection = new KVCommModule(client, this);
 					new Thread(connection).start();
-					logger.info("Connected to " + client.getInetAddress().getHostName()
-							+ " on port " + client.getPort());
+					logger.info(
+							"Connected to " + client.getInetAddress().getHostName() + " on port " + client.getPort());
 				}
 				this.serverSocket.close();
 				this.serverSocket = null;
@@ -380,27 +355,8 @@ public class KVServer implements IKVServer, Runnable {
 	@Override
 	public void close() {
 		this.running = false;
-		this.adminCommModule.close();
-	}
-
-	private boolean isRunning() {
-		return this.running;
-	}
-
-	private boolean initializeServer() {
-		logger.info("Initialize server ...");
-		try {
-			this.serverSocket = new ServerSocket(port);
-			logger.info("Server listening on port: " + this.serverSocket.getLocalPort());
-			return true;
-
-		} catch (IOException e) {
-			logger.error("Error! Cannot open server socket:");
-			if (e instanceof BindException) {
-				logger.error("Port " + port + " is already bound!");
-			}
-			return false;
-		}
+		if (this.adminConnection != null)
+			this.adminConnection.close();
 	}
 
 	/**
@@ -410,25 +366,23 @@ public class KVServer implements IKVServer, Runnable {
 	 */
 	public static void main(String[] args) {
 		try {
-			new LogSetup("logs/server.log", Level.ERROR);
+			new LogSetup("logs/server.log", Level.WARN);
 			if (args.length == 3) {
 				int port = Integer.parseInt(args[0]);
 				int cacheSize = Integer.parseInt(args[1]);
-				String strategy = args[2];
+				String cacheStrategy = args[2];
 
-				KVServer server = new KVServer(port, cacheSize, strategy);
-			} else if (args.length == 6) {
-				String zkName = args[0];
-				String zkHost = args[1];
-				int zkPort = Integer.parseInt(args[2]);
-				int port = Integer.parseInt(args[3]);
-				int cacheSize = Integer.parseInt(args[4]);
-				String strategy = args[5];
+				KVServer server = new KVServer(port, cacheSize, cacheStrategy);
+			} else if (args.length == 4) {
+				String serverName = args[0];
+				int port = Integer.parseInt(args[1]);
+				String zkHost = args[2];
+				int zkPort = Integer.parseInt(args[3]);
 
-				KVServer server = new KVServer(zkName, zkHost, zkPort, port, cacheSize, strategy);
+				KVServer server = new KVServer(serverName, port, zkHost, zkPort);
 			} else {
 				System.out.println("Error! Invalid number of arguments!");
-				System.out.println("Usage: Server <port> <cacheSize> <strategy>");
+				System.out.println("Usage: Server <port> <cacheSize> <cacheStrategy>");
 			}
 		} catch (IOException e) {
 			System.out.println("Error! Unable to initialize logger!");
@@ -441,21 +395,28 @@ public class KVServer implements IKVServer, Runnable {
 		}
 	}
 
-	private void assignCache(String strategy) {
-		switch (CacheStrategy.valueOf(strategy)) {
-			case LRU:
-				cache = new LRUCache(this.cacheSize);
-			case FIFO:
-				cache = new FIFOCache(this.cacheSize);
-			case LFU:
-				cache = new LFUCache(this.cacheSize);
-			case None:
-				break;
-			default:
-				// logger error
-				break;
+	private void initializeConnection() {
+		logger.info("Opening server socket...");
+		try {
+			this.serverSocket = new ServerSocket(port);
+			this.running = true;
+			logger.info("Server listening on port: " + this.serverSocket.getLocalPort());
+		} catch (IOException e) {
+			this.serverSocket = null;
+			this.running = false;
+			logger.error("Error! Cannot open server socket:");
+			if (e instanceof BindException)
+				logger.error("Port " + port + " is already bound!");
 		}
 	}
 
-}
+	private void connectToServer(String serverAddress, int serverPort) throws Exception {
+		Socket socket = new Socket(serverAddress, serverPort);
+		this.serverConnection = new KVCommModule(socket, null);
+		this.serverConnection.connect();
+	}
 
+	private void disconnectFromServer() {
+		this.serverConnection.disconnect();
+	}
+}

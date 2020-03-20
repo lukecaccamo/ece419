@@ -18,7 +18,7 @@ public class KVStore implements KVCommInterface {
 	private String serverAddress;
 	private int serverPort;
 	private KVCommModule communications;
-	private HashRing metaData; // this client's cached metadata
+	private HashRing metadata; // this client's cached metadata
 	private ObjectMapper om;
 
 	private static final int MAX_KEY = 20;
@@ -31,7 +31,7 @@ public class KVStore implements KVCommInterface {
 	public KVStore(String address, int port) {
 		this.serverAddress = address;
 		this.serverPort = port;
-		this.metaData = null;
+		this.metadata = null;
 		this.om = new ObjectMapper();
 	}
 
@@ -67,10 +67,10 @@ public class KVStore implements KVCommInterface {
 				return new KVSimpleMessage(StatusType.PUT_ERROR, "Value cannot be greater than 120 kilobytes", null);
 
 			// get correct server, connect to it
-			if (this.metaData != null) {
-				System.out.println("Reconnect");
+			if (this.metadata != null) {
+				System.out.println("Reconnecting...");
 				String keyHash = Hash.MD5(key);
-				IECSNode responsible = this.metaData.serverLookup(keyHash);
+				IECSNode responsible = this.metadata.serverLookup(keyHash);
 				disconnect();
 				this.serverAddress = responsible.getNodeHost();
 				this.serverPort = responsible.getNodePort();
@@ -84,8 +84,8 @@ public class KVStore implements KVCommInterface {
 			System.out.println(returnMsgStatus);
 			if (returnMsgStatus == StatusType.SERVER_NOT_RESPONSIBLE) {
 				try {
-					this.metaData = this.om.readValue(returnMsg.getValue(), HashRing.class);
-					System.out.println("new metadata");
+					this.metadata = this.om.readValue(returnMsg.getValue(), HashRing.class);
+					System.out.println("New Metadata Recieved.");
 				} catch (JsonProcessingException e) {
 					e.printStackTrace();
 				}
@@ -108,9 +108,9 @@ public class KVStore implements KVCommInterface {
 				return new KVSimpleMessage(StatusType.GET_ERROR, "Key cannot contain spaces", null);
 
 			// get correct server, connect to it
-			if (this.metaData != null) {
+			if (this.metadata != null) {
 				String keyHash = Hash.MD5(key);
-				IECSNode responsible = this.metaData.serverLookup(keyHash);
+				IECSNode responsible = this.metadata.serverLookup(keyHash);
 				disconnect();
 				this.serverAddress = responsible.getNodeHost();
 				this.serverPort = responsible.getNodePort();
@@ -123,7 +123,7 @@ public class KVStore implements KVCommInterface {
 			returnMsgStatus = returnMsg.getStatus();
 			if (returnMsgStatus == StatusType.SERVER_NOT_RESPONSIBLE) {
 				try {
-					this.metaData = this.om.readValue(returnMsg.getValue(), HashRing.class);
+					this.metadata = this.om.readValue(returnMsg.getValue(), HashRing.class);
 				} catch (JsonProcessingException e) {
 					e.printStackTrace();
 				}
@@ -140,6 +140,6 @@ public class KVStore implements KVCommInterface {
 	}
 
 	public HashRing getMetaData() {
-		return this.metaData;
+		return this.metadata;
 	}
 }

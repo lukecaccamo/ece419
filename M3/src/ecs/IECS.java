@@ -3,9 +3,19 @@ package ecs;
 import java.util.Map;
 import java.util.Collection;
 
-import ecs.IECSNode;
-
 public interface IECS {
+    public static final String ZOOKEEPER_HOST = "127.0.0.1";
+    public static final int ZOOKEEPER_PORT = 2181;
+
+    public static final String ZOOKEEPER_ADMIN_NODE_NAME = "/ECSAdmin";
+    public static final String M2_PATH = System.getProperty("user.dir");
+    public static final String ZOOKEEPER_PATH = M2_PATH + "/zookeeper-3.4.11";
+    public static final String ZOOKEEPER_SCRIPT_PATH = ZOOKEEPER_PATH + "/bin/zkServer.sh";
+    public static final String ZOOKEEPER_CONF_PATH = ZOOKEEPER_PATH + "/conf/zoo_sample.cfg";
+
+    public static final String DEFAULT_CACHE_STRATEGY = "FIFO";
+    public static final int DEFAULT_CACHE_SIZE = 1;
+
     /**
      * Starts the storage service by calling start() on all KVServer instances that participate in the service.\
      * @throws Exception    some meaningfull exception on failure

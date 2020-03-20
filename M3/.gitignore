@@ -2,10 +2,8 @@
 .vs/
 
 # Compiled class file
-m3-client.jar
-m3-ecs.jar
-m3-server.jar
 *.class
+*.jar
 
 # Log file
 *.log
@@ -35,3 +33,5 @@ zookeeper-3.4.11/
 
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
+
+.nfs*

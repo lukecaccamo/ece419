@@ -27,7 +27,7 @@ public class MultipleServersTest extends TestCase {
     private int port1, port2;
     private String serverHash1, serverHash2;
     private ECSNode node1, node2;
-    private HashRing metaData;
+    private HashRing metadata;
     private int NUM_OPS = 5000;
     private int CACHE_SIZE = 1000;
     private String POLICY = "FIFO";
@@ -44,7 +44,7 @@ public class MultipleServersTest extends TestCase {
         kvServer1.start();
         kvServer2.start();
 
-        metaData = new HashRing();
+        metadata = new HashRing();
         node1 = new ECSNode("Server1", "127.0.0.1", port1);
         node2 = new ECSNode("Server2", "127.0.0.1", port2);
 
@@ -56,12 +56,11 @@ public class MultipleServersTest extends TestCase {
         System.out.println("Server1 Hash: " + serverHash1);
         System.out.println("Server2 Hash: " + serverHash2);
 
-        metaData.addServer(serverHash1, node1);
-        metaData.addServer(serverHash2, node2);
+        metadata.addServer(serverHash1, node1);
+        metadata.addServer(serverHash2, node2);
 
-        kvServer1.updateMetaData(metaData);
-        kvServer2.updateMetaData(metaData);
-
+        kvServer1.setMetaData(metadata);
+        kvServer2.setMetaData(metadata);
     }
 
     public void tearDown() {

@@ -29,7 +29,7 @@ public class ECSNode implements IECSNode {
     private int cacheSize;
     private CacheStrategy cacheStrategy;
 
-    private ObjectMapper objectMapper;
+    private ObjectMapper om;
 
     public ECSNode() {
         this.hashKey = null;
@@ -41,82 +41,84 @@ public class ECSNode implements IECSNode {
         this.cacheSize = 0;
         this.cacheStrategy = null;
 
-        this.objectMapper = new ObjectMapper();
+        this.om = new ObjectMapper();
     }
-
 
     public ECSNode(String nodeName, String nodeHost, int nodePort) {
         this.hashKey = Hash.MD5(nodeHost + ":" + nodePort);
         this.nodeName = nodeName;
         this.nodeHost = nodeHost;
         this.nodePort = nodePort;
-        this.nodeHashRange = new String[] {null, null};
+        this.nodeHashRange = new String[] { null, null };
         this.flag = IECSNodeFlag.SHUT_DOWN;
         this.cacheSize = 0;
         this.cacheStrategy = CacheStrategy.None;
 
-        this.objectMapper = new ObjectMapper();
+        this.om = new ObjectMapper();
     }
 
     public boolean startKVServer(String zkHost, int zkPort) {
         if (this.flag != IECSNodeFlag.SHUT_DOWN)
             return false;
-        String[] command = {SSH_SCRIPT_PATH, this.nodeName, zkHost, Integer.toString(zkPort),
-                this.nodeHost, Integer.toString(this.nodePort), Integer.toString(this.cacheSize),
-                this.cacheStrategy.toString()};
+        String[] command = { SSH_SCRIPT_PATH, this.nodeName, this.nodeHost, Integer.toString(this.nodePort), zkHost,
+                Integer.toString(zkPort) };
 
         try {
             ProcessBuilder kvServerProcessBuilder = new ProcessBuilder(command).inheritIO();
             Process kvServerProcess = kvServerProcessBuilder.start();
             this.flag = IECSNodeFlag.STOP;
         } catch (Exception e) {
-            logger.error(e);
+            this.logger.error(e);
+            e.printStackTrace();
         }
         return true;
     }
 
-    public ECSNode setData(ActionType action, ZooKeeper zookeeper, HashRing hashRing) {
+    public ECSNode setData(ActionType action, ZooKeeper zk, HashRing hashRing) {
         try {
-            String zkNodeName = ECS.ZOOKEEPER_ADMIN_NODE_NAME + "/" + this.getNodeName();
-            Stat zkStat = zookeeper.exists(zkNodeName, false);
+            String zkNodeName = IECS.ZOOKEEPER_ADMIN_NODE_NAME + "/" + this.getNodeName();
+            Stat zkStat = zk.exists(zkNodeName, false);
             KVAdminMessage adminMessage = new KVAdminMessage(action, this.getHashKey(), hashRing);
-            String jsonMetaData = this.objectMapper.writeValueAsString(adminMessage).trim();
+            String jsonMetaData = this.om.writeValueAsString(adminMessage).trim();
             byte[] jsonBytes = KVCommModule.toByteArray(jsonMetaData);
-            zookeeper.setData(zkNodeName, jsonBytes, zkStat.getVersion());
-            return this.await(jsonMetaData, zookeeper);
+            zk.setData(zkNodeName, jsonBytes, zkStat.getVersion());
+            return this.await(jsonMetaData, zk);
         } catch (JsonProcessingException | KeeperException | InterruptedException e) {
-            logger.error(e);
+            this.logger.error(e);
+            e.printStackTrace();
         }
         return null;
     }
 
-    public ECSNode moveData(String moveTo, ZooKeeper zookeeper, HashRing hashRing) {
+    public ECSNode moveData(String moveTo, ZooKeeper zk, HashRing hashRing) {
         try {
-            String zkNodeName = ECS.ZOOKEEPER_ADMIN_NODE_NAME + "/" + this.getNodeName();
-            Stat zkStat = zookeeper.exists(zkNodeName, false);
+            String zkNodeName = IECS.ZOOKEEPER_ADMIN_NODE_NAME + "/" + this.getNodeName();
+            Stat zkStat = zk.exists(zkNodeName, false);
             KVAdminMessage adminMessage = new KVAdminMessage(ActionType.MOVE_DATA, moveTo, hashRing);
-            String jsonMetaData = this.objectMapper.writeValueAsString(adminMessage).trim();
+            String jsonMetaData = this.om.writeValueAsString(adminMessage).trim();
             byte[] jsonBytes = KVCommModule.toByteArray(jsonMetaData);
-            zookeeper.setData(zkNodeName, jsonBytes, zkStat.getVersion());
-            return this.await(jsonMetaData, zookeeper);
+            zk.setData(zkNodeName, jsonBytes, zkStat.getVersion());
+            return this.await(jsonMetaData, zk);
         } catch (JsonProcessingException | KeeperException | InterruptedException e) {
-            logger.error(e);
+            this.logger.error(e);
+            e.printStackTrace();
         }
         return null;
     }
 
-    private ECSNode await(String oldState, ZooKeeper zookeeper) {
+    private ECSNode await(String oldState, ZooKeeper zk) {
         try {
-            String zkNodeName = ECS.ZOOKEEPER_ADMIN_NODE_NAME + "/" + this.getNodeName();
+            String zkNodeName = IECS.ZOOKEEPER_ADMIN_NODE_NAME + "/" + this.getNodeName();
             String newState = oldState;
-            while (oldState.equals(newState)){
-                Stat zkStat = zookeeper.exists(zkNodeName, false);
-                newState = new String(zookeeper.getData(zkNodeName, false, zkStat)).trim();
+            while (oldState.equals(newState)) {
+                Stat zkStat = zk.exists(zkNodeName, false);
+                newState = new String(zk.getData(zkNodeName, false, zkStat)).trim();
             }
-            KVAdminMessage adminMessage = this.objectMapper.readValue(newState, KVAdminMessage.class);
+            KVAdminMessage adminMessage = this.om.readValue(newState, KVAdminMessage.class);
             return (ECSNode) adminMessage.getMetaData().hashRing.get(this.getHashKey());
         } catch (JsonProcessingException | KeeperException | InterruptedException e) {
-            logger.error(e);
+            this.logger.error(e);
+            e.printStackTrace();
         }
         return null;
     }
@@ -154,8 +156,8 @@ public class ECSNode implements IECSNode {
     }
 
     /**
-     * @return array of two strings representing the low and high range of the hashes that the given
-     *         node is responsible for
+     * @return array of two strings representing the low and high range of the
+     *         hashes that the given node is responsible for
      */
     @Override
     public String[] getNodeHashRange() {
@@ -164,7 +166,7 @@ public class ECSNode implements IECSNode {
 
     @Override
     public void setNodeHashRange(String from, String to) {
-        this.nodeHashRange = new String[] {from, to};
+        this.nodeHashRange = new String[] { from, to };
     }
 
     /**

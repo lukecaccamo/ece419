@@ -45,11 +45,11 @@ public class KVCommModule implements Runnable {
 	 * @param socket socket for the KVServer
 	 */
 	public KVCommModule(Socket socket, KVServer server) {
+		this.running = true;
 		this.socket = socket;
 		this.server = server;
 		this.serverAddress = this.socket.getInetAddress().getHostAddress();
 		this.serverPort = this.socket.getLocalPort();
-		this.setRunning(true);
 
 		this.om = new ObjectMapper();
 		logger.info("Connection established");
@@ -62,7 +62,7 @@ public class KVCommModule implements Runnable {
 			output = this.socket.getOutputStream();
 			input = this.socket.getInputStream();
 
-			while(running) {
+			while(this.running) {
 				try {
 
 					String msg = getMessage();
@@ -78,11 +78,9 @@ public class KVCommModule implements Runnable {
 						sendKVSimpleMsgResponse(simpleMessage);
 					}
 
-					/* connection either terminated by the client or lost due to
-					 * network problems*/
 				} catch (IOException ioe) {
 					logger.error("Error! Connection lost!");
-					running = false;
+					this.running = false;
 				} catch (PutException pex) {
 					sendKVMessage(StatusType.PUT_ERROR, pex.getKey(), pex.getValue());
 					logger.error(pex.getMessage());
@@ -93,6 +91,7 @@ public class KVCommModule implements Runnable {
 					sendKVMessage(StatusType.GET_ERROR, gex.getKey(), null);
 					logger.error(gex.getMessage());
 				} catch (Exception ex){
+					ex.printStackTrace();
 					sendKVMessage(StatusType.FAILED, ex.getMessage(), null);
 					logger.error(ex.getMessage());
 				}
@@ -131,7 +130,7 @@ public class KVCommModule implements Runnable {
 	}
 
 	private void tearDownConnection() throws IOException {
-		setRunning(false);
+		this.running = false;
 		logger.info("tearing down the connection ...");
 		if (this.socket != null) {
 			this.socket.close();
@@ -142,10 +141,6 @@ public class KVCommModule implements Runnable {
 
 	public boolean isRunning() {
 		return this.running;
-	}
-
-	public void setRunning(boolean run) {
-		this.running = run;
 	}
 
 	/**
@@ -174,12 +169,6 @@ public class KVCommModule implements Runnable {
 	public KVSimpleMessage receiveKVMessage() throws IOException {
 		String msg = getMessage();
 		return om.readValue(msg, KVSimpleMessage.class);
-	}
-
-	// For use on ECS
-	public KVAdminMessage receiveKVAdminMessage() throws IOException {
-		String msg = getMessage();
-		return om.readValue(msg, KVAdminMessage.class);
 	}
 
 	private String getMessage() throws IOException {
@@ -244,13 +233,11 @@ public class KVCommModule implements Runnable {
 	private void sendKVSimpleMsgResponse(KVSimpleMessage msg) throws Exception {
 		StatusType status = msg.getStatus();
 		String key = msg.getKey();
-		//String keyHash = Hash.MD5(key);
 		String value = msg.getValue();
 
 		switch (status) {
 			case GET:
 				if (!server.inServer(key)){
-					// need to serialize metadata
 					String mdString = om.writeValueAsString(server.getMetaData());
 					sendKVMessage(StatusType.SERVER_NOT_RESPONSIBLE, key, mdString);
 					return;
@@ -268,7 +255,6 @@ public class KVCommModule implements Runnable {
 
 			case PUT:
 				if (!server.inServer(key)){
-					// need to serialize metadata
 					String mdString = om.writeValueAsString(server.getMetaData());
 					sendKVMessage(StatusType.SERVER_NOT_RESPONSIBLE, key, mdString);
 					return;

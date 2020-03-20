@@ -66,8 +66,9 @@ public class KVDatabase {
             fileIn.close();
             objectIn.close();
             return map;
-        } catch (Exception ex) {
-            ex.printStackTrace();
+        } catch (Exception e) {
+            this.logger.error(e);
+            e.printStackTrace();
             return null;
         }
     }
@@ -144,7 +145,7 @@ public class KVDatabase {
             try {
                 writeKV(start, key, value);
             } catch (IOException e) {
-                logger.error("Error! Write to disk");
+                this.logger.error("Error! Write to disk");
             }
         } else {
             // new entry
@@ -152,7 +153,7 @@ public class KVDatabase {
                 // can also start from beginning of file and loop through until find invalid block
                 writeKV(-1, key, value);
             } catch (IOException e) {
-                logger.error("Error! Write to disk");
+                this.logger.error("Error! Write to disk");
             }
         }
 
@@ -168,9 +169,8 @@ public class KVDatabase {
             objectOut.close();
             fileOut.close();
             logger.info("Index saved");
-        } catch (IOException i) {
-            logger.error("Error! Saving index");
-
+        } catch (IOException e) {
+            this.logger.error("Error! Saving index");
         }
         return false;
     }
@@ -207,6 +207,7 @@ public class KVDatabase {
                 try {
                     value = getValue(startIndex);
                 } catch (IOException e) {
+                    this.logger.error(e);
                     e.printStackTrace();
                 }
                 movingData.put(key, value);
@@ -229,6 +230,7 @@ public class KVDatabase {
             try {
                 writeKV(-1, entry.getKey(), entry.getValue());
             } catch (IOException e) {
+                this.logger.error(e);
                 e.printStackTrace();
             }
         }
