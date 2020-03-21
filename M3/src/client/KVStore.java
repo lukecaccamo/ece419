@@ -2,7 +2,7 @@ package client;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import ecs.IECSNode;
+import ecs.ECSNode;
 import shared.communications.KVCommModule;
 import shared.hashring.Hash;
 import shared.hashring.HashRing;
@@ -69,7 +69,7 @@ public class KVStore implements KVCommInterface {
 			// get correct server, connect to it
 			if (this.metadata != null) {
 				String keyHash = Hash.MD5(key);
-				IECSNode responsible = this.metadata.serverLookup(keyHash);
+				ECSNode responsible = this.metadata.serverLookup(keyHash);
 
 				//Check if reconnect is necessary
 				if (connectedServerHash != responsible.getHashKey()) {
@@ -118,7 +118,7 @@ public class KVStore implements KVCommInterface {
 			// get correct server, connect to it
 			if (this.metadata != null) {
 				String keyHash = Hash.MD5(key);
-				IECSNode responsible = this.metadata.serverLookup(keyHash);
+				ECSNode responsible = this.metadata.serverLookup(keyHash);
 
 				//Check if reconnect is necessary
 				if (connectedServerHash != responsible.getHashKey()) {

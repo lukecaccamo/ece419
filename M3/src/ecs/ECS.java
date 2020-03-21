@@ -2,14 +2,16 @@ package ecs;
 
 import java.io.FileInputStream;
 import java.io.InputStream;
-import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.TreeMap;
 import java.util.Map;
+import java.util.PriorityQueue;
 import java.util.Properties;
+import java.util.Set;
 
 import org.apache.log4j.Logger;
 import org.apache.zookeeper.*;
@@ -18,10 +20,8 @@ import org.apache.zookeeper.data.Stat;
 import java.util.concurrent.CountDownLatch;
 
 import app_kvServer.IKVServer;
-import app_kvServer.IKVServer.ServerStateType;
 import ecs.IECS.*;
 import ecs.IECSNode.IECSNodeFlag;
-import shared.hashring.Hash;
 import shared.hashring.HashRing;
 import shared.messages.IKVAdminMessage.ActionType;
 
@@ -30,8 +30,8 @@ public class ECS implements IECS {
     private final boolean debug;
 
     private Properties properties;
-    public ArrayList<IECSNode> freeServers;
     public HashRing usedServers;
+    public PriorityQueue<ECSNode> freeServers;
 
     private ZooKeeper zk;
     private CountDownLatch connected;
@@ -40,86 +40,63 @@ public class ECS implements IECS {
         this.debug = debug;
 
         this.properties = new Properties();
-        this.freeServers = new ArrayList<>();
         this.usedServers = new HashRing();
+        this.freeServers = new PriorityQueue<ECSNode>(new Comparator<ECSNode>() {
+            @Override
+            public int compare(ECSNode a, ECSNode b) {
+                return a.getNodeName().compareTo(b.getNodeName());
+            }
+        });
 
         this.initializeZooKeeper();
         this.initializeECSNode();
         this.initializeServers(configFilePath);
-        this.resetZooKeeperNodes(this.freeServers.iterator());
-
-        this.setupNodes(3, DEFAULT_CACHE_STRATEGY, DEFAULT_CACHE_SIZE);
+        this.resetZooKeeperNodes();
     }
 
-    /**
-     * Starts the storage service by calling start() on all KVServer instances that
-     * participate in the service.
-     * 
-     * @throws Exception some meaningfull exception on failure
-     * @return true on success, false on failure
-     */
     @Override
     public boolean start() {
         return this.broadcast(ActionType.START);
     }
 
-    /**
-     * Stops the service; all participating KVServers are stopped for processing
-     * client requests but the processes remain running.
-     * 
-     * @throws Exception some meaningfull exception on failure
-     * @return true on success, false on failure
-     */
     @Override
     public boolean stop() {
         return this.broadcast(ActionType.STOP);
     }
 
-    /**
-     * Stops all server instances and exits the remote processes.
-     * 
-     * @throws Exception some meaningfull exception on failure
-     * @return true on success, false on failure
-     */
     @Override
     public boolean shutdown() {
         return this.broadcast(ActionType.SHUTDOWN);
     }
 
-    /**
-     * Create a new KVServer with the specified cache size and replacement strategy
-     * and add it to the storage service at an arbitrary position.
-     * 
-     * @return name of new server
-     */
     @Override
     public IECSNode addNode(String cacheStrategy, int cacheSize) {
         ECSNode node = null;
+        if (this.freeServers.isEmpty())
+                return null;
         try {
-            if (this.freeServers.size() > 0) {
-                node = (ECSNode) this.freeServers.remove(0);
-                node.setCacheStrategy(cacheStrategy);
-                node.setCacheSize(cacheSize);
-                this.usedServers.hashRing.put(node.getHashKey(), node);
+            node = this.freeServers.remove();
+            node.setCacheStrategy(cacheStrategy);
+            node.setCacheSize(cacheSize);
+            this.usedServers.hashRing.put(node.getHashKey(), node);
 
-                this.updateRingRanges();
-                node.startKVServer(IECS.ZOOKEEPER_HOST, IECS.ZOOKEEPER_PORT, this.debug);
-                awaitNodes(1, 30000);
+            this.updateRingRanges(null);
+            node.startKVServer(IECS.ZOOKEEPER_HOST, IECS.ZOOKEEPER_PORT);
+            awaitNodes(1, 10000);
 
-                node = node.setData(ActionType.INIT, this.zk, this.usedServers);
-                this.usedServers.hashRing.put(node.getHashKey(), node);
+            node = node.setData(ActionType.INIT, this.usedServers);
+            this.usedServers.hashRing.put(node.getHashKey(), node);
 
-                this.broadcast(ActionType.UPDATE);
+            this.broadcast(ActionType.UPDATE);
 
-                ECSNode from = (ECSNode) this.usedServers.getPred(node.getHashKey());
-                from.setData(ActionType.LOCK_WRITE, this.zk, this.usedServers);
-                node.setData(ActionType.LOCK_WRITE, this.zk, this.usedServers);
+            ECSNode from = this.usedServers.getPred(node.getHashKey());
+            from.setData(ActionType.LOCK_WRITE, this.usedServers);
+            node.setData(ActionType.LOCK_WRITE, this.usedServers);
 
-                from.moveData(node.getHashKey(), this.zk, this.usedServers);
+            from.moveData(node.getHashKey(), this.usedServers);
 
-                from.setData(ActionType.UNLOCK_WRITE, this.zk, this.usedServers);
-                node.setData(ActionType.UNLOCK_WRITE, this.zk, this.usedServers);
-            }
+            from.setData(ActionType.UNLOCK_WRITE, this.usedServers);
+            node.setData(ActionType.UNLOCK_WRITE, this.usedServers);
         } catch (Exception e) {
             this.logger.error(e);
             e.printStackTrace();
@@ -127,18 +104,6 @@ public class ECS implements IECS {
         return node;
     }
 
-    /**
-     * Randomly choose <numberOfNodes> servers from the available machines and start
-     * the KVServer by issuing an SSH call to the respective machine. This call
-     * launches the storage server with the specified cache size and replacement
-     * strategy. For simplicity, locate the KVServer.jar in the same directory as
-     * the ECS. All storage servers are initialized with the metadata and any
-     * persisted data, and remain in state stopped. NOTE: Must call setupNodes
-     * before the SSH calls to start the servers and must call awaitNodes before
-     * returning
-     * 
-     * @return set of strings containing the names of the nodes
-     */
     @Override
     public Collection<IECSNode> addNodes(int count, String cacheStrategy, int cacheSize) {
         Collection<IECSNode> nodes = new ArrayList<>();
@@ -148,33 +113,28 @@ public class ECS implements IECS {
         return nodes;
     }
 
-    /**
-     * Sets up `count` servers with the ECS (in this case Zookeeper)
-     * 
-     * @return array of strings, containing unique names of servers
-     */
     @Override
     public Collection<IECSNode> setupNodes(int count, String cacheStrategy, int cacheSize) {
         ArrayList<IECSNode> nodes = new ArrayList<>();
         for (int i = 0; i < count; i++) {
-            if (this.freeServers.size() == 0)
+            if (this.freeServers.isEmpty())
                 break;
-            ECSNode node = (ECSNode) this.freeServers.remove(0);
+            ECSNode node = this.freeServers.remove();
             node.setCacheStrategy(cacheStrategy);
             node.setCacheSize(cacheSize);
             this.usedServers.hashRing.put(node.getHashKey(), node);
         }
 
-        this.updateRingRanges();
+        this.updateRingRanges(null);
 
-        for (Map.Entry<String, IECSNode> entry : this.usedServers.hashRing.entrySet()) {
-            ECSNode node = (ECSNode) entry.getValue();
-            node.startKVServer(IECS.ZOOKEEPER_HOST, IECS.ZOOKEEPER_PORT, this.debug);
+        for (Map.Entry<String, ECSNode> entry : this.usedServers.hashRing.entrySet()) {
+            ECSNode node = entry.getValue();
+            node.startKVServer(IECS.ZOOKEEPER_HOST, IECS.ZOOKEEPER_PORT);
             nodes.add(node);
         }
 
         try {
-            awaitNodes(this.usedServers.hashRing.size(), 30000);
+            awaitNodes(this.usedServers.hashRing.size(), 10000);
         } catch (Exception e) {
             this.logger.error(e);
             e.printStackTrace();
@@ -184,13 +144,6 @@ public class ECS implements IECS {
         return nodes;
     }
 
-    /**
-     * Wait for all nodes to report status or until timeout expires
-     * 
-     * @param count   number of nodes to wait for
-     * @param timeout the timeout in milliseconds
-     * @return true if all nodes reported successfully, false otherwise
-     */
     @Override
     public boolean awaitNodes(int count, int timeout) throws Exception {
         long start = System.currentTimeMillis();
@@ -202,37 +155,32 @@ public class ECS implements IECS {
         throw new Exception("`awaitNodes(" + String.valueOf(count) + ", " + String.valueOf(timeout) + ")` Timeout.");
     }
 
-    /**
-     * Removes nodes with names matching the nodeNames array
-     * 
-     * @param nodeNames names of nodes to remove
-     * @return true on success, false otherwise
-     */
     @Override
     public boolean removeNodes(Collection<String> nodeNames) {
         for (String name : nodeNames) {
-            Iterator<Map.Entry<String, IECSNode>> it = this.usedServers.hashRing.entrySet().iterator();
+            Iterator<Map.Entry<String, ECSNode>> it = this.usedServers.hashRing.entrySet().iterator();
             while (it.hasNext()) {
-                Map.Entry<String, IECSNode> e = it.next();
+                Map.Entry<String, ECSNode> e = it.next();
                 String removed = e.getKey();
-                ECSNode node = (ECSNode) e.getValue();
+                ECSNode node = e.getValue();
                 if (node.getNodeName().equals(name)) {
-                    ECSNode to = (ECSNode) this.usedServers.getSucc(node.getHashKey());
+                    ECSNode to = this.usedServers.getSucc(node.getHashKey());
 
-                    it.remove();
-                    updateRingRanges();
+                    updateRingRanges(node);
 
-                    to.setData(ActionType.LOCK_WRITE, this.zk, this.usedServers);
-                    node.setData(ActionType.LOCK_WRITE, this.zk, this.usedServers);
+                    to.setData(ActionType.LOCK_WRITE, this.usedServers);
+                    node.setData(ActionType.LOCK_WRITE, this.usedServers);
 
-                    node.moveData(to.getHashKey(), this.zk, this.usedServers);
+                    node.moveData(to.getHashKey(), this.usedServers);
 
-                    to.setData(ActionType.UNLOCK_WRITE, this.zk, this.usedServers);
-                    node.setData(ActionType.UNLOCK_WRITE, this.zk, this.usedServers);
+                    to.setData(ActionType.UNLOCK_WRITE, this.usedServers);
+                    node.setData(ActionType.UNLOCK_WRITE, this.usedServers);
 
-                    node = node.setData(ActionType.SHUTDOWN, this.zk, this.usedServers);
+                    node = node.setData(ActionType.SHUTDOWN, this.usedServers);
                     this.freeServers.add(node);
 
+                    it.remove();
+                    updateRingRanges(null);
                     this.broadcast(ActionType.UPDATE);
                 }
             }
@@ -240,17 +188,34 @@ public class ECS implements IECS {
         return true;
     }
 
-    /**
-     * Get a map of all nodes
-     */
-    @Override
-    public Map<String, IECSNode> getNodes() {
-        return this.usedServers.hashRing;
+    public boolean removeAllNodes() {
+        Iterator<Map.Entry<String, ECSNode>> it = this.usedServers.hashRing.entrySet().iterator();
+        while (it.hasNext()) {
+            Map.Entry<String, ECSNode> e = it.next();
+            String removed = e.getKey();
+            ECSNode node = e.getValue();
+            ECSNode to = this.usedServers.getSucc(node.getHashKey());
+
+            it.remove();
+            this.freeServers.add(node);
+        }
+        this.shutdown();
+        return true;
     }
 
-    /**
-     * Get the specific node responsible for the given key
-     */
+    @Override
+    public Map<String, IECSNode> getNodes() {
+        Map<String, IECSNode> nodes = new TreeMap<String, IECSNode>();
+        for (String key : this.usedServers.getHashRing().keySet()) {
+            nodes.put(key, this.usedServers.getHashRing().get(key));
+        }
+        return nodes;
+    }
+
+    public String[] getNodeKeys() {
+        return this.usedServers.hashRing.keySet().toArray(new String[this.usedServers.hashRing.size()]);
+    }
+
     @Override
     public IECSNode getNodeByKey(String Key) {
         return this.usedServers.hashRing.get(Key);
@@ -273,7 +238,7 @@ public class ECS implements IECS {
                         connected.countDown();
                 }
             };
-            this.zk = new ZooKeeper(IECS.ZOOKEEPER_HOST, 30000, watcher);
+            this.zk = new ZooKeeper(IECS.ZOOKEEPER_HOST, 10000, watcher);
             connected.await();
         } catch (Exception e) {
             this.logger.error(e);
@@ -315,8 +280,10 @@ public class ECS implements IECS {
                 String host = value[0];
                 String port = value[1];
 
-                IECSNode node = new ECSNode(key, host, Integer.parseInt(port));
+                ECSNode node = new ECSNode(key, host, Integer.parseInt(port), this.zk, this.debug);
                 this.freeServers.add(node);
+
+                node.stopKVServer();
             }
         } catch (Exception e) {
             this.logger.error(e);
@@ -324,10 +291,11 @@ public class ECS implements IECS {
         }
     }
 
-    private void resetZooKeeperNodes(Iterator nodes) {
+    private void resetZooKeeperNodes() {
+        Iterator<ECSNode> nodes = this.freeServers.iterator();
         try {
             while (nodes.hasNext()) {
-                IECSNode node = (ECSNode) nodes.next();
+                ECSNode node = nodes.next();
                 String zkNodeName = "/" + node.getNodeName();
                 try {
                     if (this.zk.exists(zkNodeName, true) != null)
@@ -343,11 +311,11 @@ public class ECS implements IECS {
     }
 
     private boolean broadcast(ActionType action) {
-        Iterator<Map.Entry<String, IECSNode>> it = this.usedServers.hashRing.entrySet().iterator();
+        Iterator<Map.Entry<String, ECSNode>> it = this.usedServers.hashRing.entrySet().iterator();
         while (it.hasNext()) {
-            Map.Entry<String, IECSNode> e = it.next();
-            ECSNode node = (ECSNode) e.getValue();
-            node = node.setData(action, this.zk, this.usedServers);
+            Map.Entry<String, ECSNode> e = it.next();
+            ECSNode node = e.getValue();
+            node = node.setData(action, this.usedServers);
             e.setValue(node);
 
             if (node.getFlag() == IECSNodeFlag.SHUT_DOWN) {
@@ -358,23 +326,27 @@ public class ECS implements IECS {
         return true;
     }
 
-    private void updateRingRanges() {
+    private void updateRingRanges(ECSNode neglected) {
         if (this.usedServers.hashRing.size() < 1)
             return;
 
-        Iterator<Map.Entry<String, IECSNode>> it = this.usedServers.hashRing.entrySet().iterator();
+        Set<Map.Entry<String, ECSNode>> entries = this.usedServers.getHashRing().entrySet();
+        if (neglected != null)
+            entries.remove(neglected.getHashKey());
+
+        Iterator<Map.Entry<String, ECSNode>> it = entries.iterator();
         String moveFrom = null;
         String prevHash = null;
         while (it.hasNext()) {
-            Map.Entry<String, IECSNode> entry = it.next();
+            Map.Entry<String, ECSNode> entry = it.next();
             if (prevHash != null) {
-                IECSNode n = entry.getValue();
+                ECSNode n = entry.getValue();
                 n.setNodeHashRange(prevHash, entry.getKey());
             }
             prevHash = entry.getKey();
         }
         String firstHash = this.usedServers.hashRing.firstKey();
-        IECSNode n = this.usedServers.hashRing.get(firstHash);
+        ECSNode n = this.usedServers.hashRing.get(firstHash);
         n.setNodeHashRange(prevHash, firstHash);
     }
 }

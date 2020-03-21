@@ -1,28 +1,32 @@
 package shared.hashring;
 
-import ecs.IECSNode;
+import ecs.ECSNode;
 import java.util.*;
 
 public class HashRing {
-    public TreeMap<String, IECSNode> hashRing;
+    public TreeMap<String, ECSNode> hashRing;
 
     public HashRing() {
-        this.hashRing = new TreeMap<String, IECSNode>(new HashComparator());
+        this.hashRing = new TreeMap<String, ECSNode>(new HashComparator());
+    }
+
+    public String toString() {
+        return this.hashRing.values().toString();
     }
 
     public void clear() {
         this.hashRing.clear();
     }
 
-    public TreeMap<String, IECSNode> getHashRing() {
+    public TreeMap<String, ECSNode> getHashRing() {
         return hashRing;
     }
 
-    public void setHashRing(TreeMap<String, IECSNode> hashRing) {
+    public void setHashRing(TreeMap<String, ECSNode> hashRing) {
         this.hashRing = hashRing;
     }
 
-    public void addServer(String hashIndex, IECSNode server){
+    public void addServer(String hashIndex, ECSNode server){
         hashRing.put(hashIndex, server);
     }
 
@@ -30,7 +34,7 @@ public class HashRing {
         hashRing.remove(hashIndex);
     }
 
-    public IECSNode getSucc(String hashIndex){
+    public ECSNode getSucc(String hashIndex){
         String succKey = hashRing.higherKey(hashIndex);
         if (succKey == null){
             String firstIndex = hashRing.firstKey();
@@ -43,7 +47,7 @@ public class HashRing {
         return hashRing.get(succKey);
     }
 
-    public IECSNode getPred(String hashIndex){
+    public ECSNode getPred(String hashIndex){
         String predKey = hashRing.lowerKey(hashIndex);
         if (predKey == null){
             String lastIndex = hashRing.lastKey();
@@ -56,7 +60,7 @@ public class HashRing {
         return hashRing.get(predKey);
     }
 
-    public IECSNode serverLookup(String hashIndex){
+    public ECSNode serverLookup(String hashIndex){
         String key = hashRing.ceilingKey(hashIndex);
         if (key == null){
             key = hashRing.firstKey();
@@ -67,7 +71,7 @@ public class HashRing {
         return hashRing.get(key);
     }
 
-    public IECSNode getServer(String hashIndex){
+    public ECSNode getServer(String hashIndex){
         return hashRing.get(hashIndex);
     }
 

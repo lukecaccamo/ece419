@@ -7,11 +7,13 @@ import java.io.InputStreamReader;
 import java.net.*;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.Map;
 
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
+import app_kvServer.IKVServer.CacheStrategy;
 import logger.LogSetup;
 
 import ecs.ECS;
@@ -29,10 +31,15 @@ public class ECSClient implements IECSClient {
     private boolean stop = false;
     private ECS ecs;
 
+    public final int DEFAULT_CLUSTER_SIZE = 2;
+    public final String DEFAULT_CACHE_STRATEGY = CacheStrategy.FIFO.toString();
+    public final int DEFAULT_CACHE_SIZE = 0;
+
     public ECSClient(String configFilePath, boolean debug) {
         this.logger = Logger.getRootLogger();
         this.debug = debug;
         this.ecs = new ECS(configFilePath, this.debug);
+        this.ecs.setupNodes(DEFAULT_CLUSTER_SIZE, DEFAULT_CACHE_STRATEGY, DEFAULT_CACHE_SIZE);
     }
 
     public void run() {
@@ -169,22 +176,16 @@ public class ECSClient implements IECSClient {
 
     private void printUsedServers() {
         this.prompt.printPrimary("UsedServers:");
-        for (Map.Entry<String, IECSNode> e : this.getNodes().entrySet()) {
-            IECSNode node = e.getValue();
-            String str = String.format("\t%s(%s:%d) flag: %s range: (%s,%s) cache: %s(%d)", node.getNodeName(),
-                    node.getNodeHost(), node.getNodePort(), node.getFlag().toString(), node.getNodeHashRange()[0],
-                    node.getNodeHashRange()[1], node.getCacheStrategy().toString(), node.getCacheSize());
-            this.prompt.printPrimary(str);
+        for (ECSNode node : this.ecs.usedServers.getHashRing().values()) {
+            this.prompt.printPrimary(node.toString());
         }
     }
 
     private void printFreeServers() {
         this.prompt.printSecondary("FreeServers:");
-        for (IECSNode node : this.ecs.freeServers) {
-            String str = String.format("\t%s(%s:%d) flag: %s range: (%s,%s) cache: %s(%d)", node.getNodeName(),
-                    node.getNodeHost(), node.getNodePort(), node.getFlag().toString(), node.getNodeHashRange()[0],
-                    node.getNodeHashRange()[1], node.getCacheStrategy().toString(), node.getCacheSize());
-            this.prompt.printSecondary(str);
+        Iterator<ECSNode> it = this.ecs.freeServers.iterator();
+        while(it.hasNext()) {
+            this.prompt.printSecondary(it.next().toString());
         }
     }
 
