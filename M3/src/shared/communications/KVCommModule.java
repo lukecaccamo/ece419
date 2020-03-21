@@ -258,6 +258,7 @@ public class KVCommModule implements Runnable {
 					sendKVMessage(StatusType.SERVER_NOT_RESPONSIBLE, key, mdString);
 					return;
 				}
+
 				status = StatusType.PUT_SUCCESS;
 
 				if(value.equals(DELETE_VALUE))
@@ -270,13 +271,24 @@ public class KVCommModule implements Runnable {
 
 				sendKVMessage(status, key, value);
 
+				//do replication here
+				if (!server.replicate(key, value)) {
+					logger.error("Replication failure!");
+				} else {
+					logger.info("Replication success!");
+				}
+
 				break;
 
 			case MOVE_VALUES:
-
 				server.receiveData(value);
 				sendKVMessage(StatusType.MOVE_VALUES_DONE, key, "");
+				break;
 
+			case REPLICATE:
+				server.putKV(key, value);
+				sendKVMessage(StatusType.REPLICATION_DONE, key, "");
+				break;
 		}
 	}
 

@@ -21,6 +21,7 @@ import shared.hashring.Hash;
 import shared.hashring.HashRing;
 import shared.messages.KVMessage;
 import shared.messages.KVSimpleMessage;
+import shared.replication.Replicator;
 
 import java.io.IOException;
 import java.net.*;
@@ -36,7 +37,6 @@ public class KVServer implements IKVServer, Runnable {
 	private int cacheSize;
 	private String cacheStrategy;
 	private ServerSocket serverSocket;
-	private KVCommModule serverConnection;
 	private IKVCache cache;
 	private KVDatabase database;
 	private ObjectMapper om;
@@ -49,7 +49,10 @@ public class KVServer implements IKVServer, Runnable {
 	private ServerStateType serverStateType;
 	private HashRing metadata;
 	private boolean writeLock;
+
 	private KVAdminCommModule adminConnection;
+	private KVCommModule serverConnection;
+	private Replicator replicator;
 
 	/**
 	 * Start KV Server at given port
@@ -81,6 +84,8 @@ public class KVServer implements IKVServer, Runnable {
 		this.om = new ObjectMapper();
 
 		this.database = new KVDatabase(this.port);
+
+		this.replicator = new Replicator(this);
 
 		initializeServer(null, null, cacheSize, CacheStrategy.valueOf(cacheStrategy));
 	}
@@ -118,6 +123,7 @@ public class KVServer implements IKVServer, Runnable {
 		this.writeLock = false;
 
 		this.adminConnection = new KVAdminCommModule(serverName, zkHost, zkPort, this);
+		this.replicator = new Replicator(this);
 		new Thread(this.adminConnection).start();
 	}
 
@@ -144,9 +150,15 @@ public class KVServer implements IKVServer, Runnable {
 		this.cacheSize = cacheSize;
 		this.cacheStrategy = cacheStrategy.toString();
 
+		replicator.connect();
+
 		if (!this.running)
 			this.prompt.print("Running!");
 			new Thread(this).start();
+	}
+
+	public boolean replicate(String key, String value) {
+		return replicator.replicate(key, value);
 	}
 
 	public ServerStateType getServerState() {
@@ -180,6 +192,7 @@ public class KVServer implements IKVServer, Runnable {
 
 	public void setMetaData(HashRing metadata) {
 		this.metadata = metadata;
+		replicator.connect();
 	}
 
 	public void moveData(String[] range, String serverKey) throws Exception {
@@ -193,7 +206,10 @@ public class KVServer implements IKVServer, Runnable {
 		}
 
 		ECSNode dest = this.metadata.getServer(serverKey);
-		connectToServer(dest.getNodeHost(), dest.getNodePort());
+		// connect to other server, send dataJSON as value
+		Socket socket = new Socket(dest.getNodeHost(), dest.getNodePort());
+		this.serverConnection = new KVCommModule(socket, null);
+		this.serverConnection.connect();
 
 		this.serverConnection.sendKVMessage(KVMessage.StatusType.MOVE_VALUES, range[0], dataJSON);
 
@@ -201,7 +217,8 @@ public class KVServer implements IKVServer, Runnable {
 		if (returnMsg.getStatus() == KVMessage.StatusType.MOVE_VALUES_DONE) {
 			this.database.deleteMovedData(movingData);
 		}
-		disconnectFromServer();
+		// receive msg from server that its done, delete data in movingData
+		this.serverConnection.disconnect();
 	}
 
 	public void receiveData(String newDataJSON) {
@@ -417,15 +434,5 @@ public class KVServer implements IKVServer, Runnable {
 			if (e instanceof BindException)
 				logger.error("Port " + port + " is already bound!");
 		}
-	}
-
-	private void connectToServer(String serverAddress, int serverPort) throws Exception {
-		Socket socket = new Socket(serverAddress, serverPort);
-		this.serverConnection = new KVCommModule(socket, null);
-		this.serverConnection.connect();
-	}
-
-	private void disconnectFromServer() {
-		this.serverConnection.disconnect();
 	}
 }
