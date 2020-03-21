@@ -1,17 +1,15 @@
 package client;
 
-import java.math.BigInteger;
-import java.net.Socket;
-
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import shared.messages.KVAdminMessage;
-import shared.messages.KVMessage.StatusType;
-import shared.communications.KVCommModule;
-import shared.messages.KVSimpleMessage;
-import shared.hashring.*;
-
 import ecs.IECSNode;
+import shared.communications.KVCommModule;
+import shared.hashring.Hash;
+import shared.hashring.HashRing;
+import shared.messages.KVMessage.StatusType;
+import shared.messages.KVSimpleMessage;
+
+import java.net.Socket;
 
 public class KVStore implements KVCommInterface {
 
@@ -20,6 +18,7 @@ public class KVStore implements KVCommInterface {
 	private KVCommModule communications;
 	private HashRing metadata; // this client's cached metadata
 	private ObjectMapper om;
+	private String connectedServerHash;
 
 	private static final int MAX_KEY = 20;
 	private static final int MAX_VALUE = 122880;
@@ -32,6 +31,7 @@ public class KVStore implements KVCommInterface {
 		this.serverAddress = address;
 		this.serverPort = port;
 		this.metadata = null;
+		this.connectedServerHash = null;
 		this.om = new ObjectMapper();
 	}
 
@@ -68,31 +68,39 @@ public class KVStore implements KVCommInterface {
 
 			// get correct server, connect to it
 			if (this.metadata != null) {
-				System.out.println("Reconnecting...");
 				String keyHash = Hash.MD5(key);
 				IECSNode responsible = this.metadata.serverLookup(keyHash);
-				disconnect();
-				this.serverAddress = responsible.getNodeHost();
-				this.serverPort = responsible.getNodePort();
-				connect();
+
+				//Check if reconnect is necessary
+				if (connectedServerHash != responsible.getHashKey()) {
+					System.out.println("Reconnecting...");
+					disconnect();
+					this.serverAddress = responsible.getNodeHost();
+					this.serverPort = responsible.getNodePort();
+					connect();
+					connectedServerHash = responsible.getHashKey();
+				}
+
+				System.out.println("Connected to server: " + responsible.getNodeName() + " which serves key: " + key);
 			}
 
 			this.communications.sendKVMessage(StatusType.PUT, key, value);
 
 			returnMsg = this.communications.receiveKVMessage();
 			returnMsgStatus = returnMsg.getStatus();
-			System.out.println(returnMsgStatus);
+
 			if (returnMsgStatus == StatusType.SERVER_NOT_RESPONSIBLE) {
 				try {
 					this.metadata = this.om.readValue(returnMsg.getValue(), HashRing.class);
-					System.out.println("New Metadata Recieved.");
+					System.out.println("Received new metadata from server: " + metadata.serverLookup(key).getNodeName());
 				} catch (JsonProcessingException e) {
 					e.printStackTrace();
 				}
 				// set value to say metadata instead of the entire serialization
-				returnMsg.setValue("new metadata received");
+				returnMsg.setValue("New metadata received");
 			}
 		}
+
 		return returnMsg;
 	}
 
@@ -111,10 +119,18 @@ public class KVStore implements KVCommInterface {
 			if (this.metadata != null) {
 				String keyHash = Hash.MD5(key);
 				IECSNode responsible = this.metadata.serverLookup(keyHash);
-				disconnect();
-				this.serverAddress = responsible.getNodeHost();
-				this.serverPort = responsible.getNodePort();
-				connect();
+
+				//Check if reconnect is necessary
+				if (connectedServerHash != responsible.getHashKey()) {
+					System.out.println("Reconnecting...");
+					disconnect();
+					this.serverAddress = responsible.getNodeHost();
+					this.serverPort = responsible.getNodePort();
+					connect();
+					connectedServerHash = responsible.getHashKey();
+				}
+
+				System.out.println("Connected to server: " + responsible.getNodeName() + " which serves key: " + key);
 			}
 
 			this.communications.sendKVMessage(StatusType.GET, key, null);
@@ -124,13 +140,15 @@ public class KVStore implements KVCommInterface {
 			if (returnMsgStatus == StatusType.SERVER_NOT_RESPONSIBLE) {
 				try {
 					this.metadata = this.om.readValue(returnMsg.getValue(), HashRing.class);
+					System.out.println("Received new metadata from server: " + metadata.serverLookup(key).getNodeName());
 				} catch (JsonProcessingException e) {
 					e.printStackTrace();
 				}
 				// set value to say metadata instead of the entire serialization
-				returnMsg.setValue("new metadata received");
+				returnMsg.setValue("New metadata received");
 			}
 		}
+
 		return returnMsg;
 	}
 
