@@ -28,13 +28,6 @@ public class ECSTest extends TestCase {
     private ECSNode kvServer1, kvServer2;
     private String serverHash1, serverHash2;
     private KVStore kvClient1, kvClient2;
-    private int port1, port2;
-    private ECSNode node1, node2;
-    private HashRing metadata;
-    private int NUM_OPS = 5000;
-    private int CACHE_SIZE = 1000;
-    private String POLICY = "FIFO";
-    private ECSNode node = null;
 
     public void setUp() {
         Exception ex = null;
@@ -75,5 +68,13 @@ public class ECSTest extends TestCase {
 
         assertEquals(IECSNodeFlag.START ,kvServer1.getFlag());
         assertEquals(IECSNodeFlag.START, kvServer2.getFlag());
+    }
+
+    @Test
+	public void testShutdown() {
+        AllTests.ecs.shutdown();
+
+        assertEquals(IECSNodeFlag.SHUT_DOWN ,kvServer1.getFlag());
+        assertEquals(IECSNodeFlag.SHUT_DOWN, kvServer2.getFlag());
     }
 }

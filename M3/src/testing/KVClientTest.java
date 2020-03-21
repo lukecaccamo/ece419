@@ -272,8 +272,8 @@ public class KVClientTest extends TestCase {
 
         assertEquals(Hash.MD5(key1), "202cb962ac59075b964b07152d234b70");
 
-        assertEquals(kvServer1.getNodeHashRange()[1], "4aa8d5cc642b05d2d5980a5363dd6ecd");
-        assertEquals(kvServer2.getNodeHashRange()[1], "986d316f616a662caf449f2296dbfac0");
+        assertEquals("68d77f380f7e215676838eca9b90ebb8", kvServer1.getNodeHashRange()[1]);
+        assertEquals("ee935ceeea3cd07c8937e5ad812759a8", kvServer2.getNodeHashRange()[1]);
 
         try {
             toServer1 = kvClient.put(key1, value1);
@@ -294,8 +294,8 @@ public class KVClientTest extends TestCase {
 
         assertEquals(Hash.MD5(key2), "900150983cd24fb0d6963f7d28e17f72");
 
-        assertEquals(kvServer1.getNodeHashRange()[1], "4aa8d5cc642b05d2d5980a5363dd6ecd");
-        assertEquals(kvServer2.getNodeHashRange()[1], "986d316f616a662caf449f2296dbfac0");
+        assertEquals("68d77f380f7e215676838eca9b90ebb8", kvServer1.getNodeHashRange()[1]);
+        assertEquals("ee935ceeea3cd07c8937e5ad812759a8", kvServer2.getNodeHashRange()[1]);
 
         try {
             toServer2 = kvClient.put(key2, value2);

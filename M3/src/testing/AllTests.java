@@ -2,12 +2,8 @@ package testing;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.IOException;
 import java.io.InputStream;
-import java.math.BigInteger;
-import java.util.ArrayList;
 import java.util.Properties;
-import java.util.TreeMap;
 
 import org.apache.log4j.Level;
 
@@ -19,7 +15,7 @@ import logger.LogSetup;
 import ecs.ECS;
 
 public class AllTests {
-	static final boolean DEBUG = true;
+	static final boolean DEBUG = false;
 	static {
 		try {
 			new LogSetup("logs/testing/test.log", Level.ERROR);
@@ -55,6 +51,7 @@ public class AllTests {
 	static final String CONFIG_FILE_PATH = "./ecs.config";
 
 	public static Test suite() {
+		AllTests.ecs.setupNodes(2, "FIFO", 0);
 		AllTests.ecs.start();
 		AllTests.resetDB();
 
