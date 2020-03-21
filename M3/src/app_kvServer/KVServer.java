@@ -124,6 +124,7 @@ public class KVServer implements IKVServer, Runnable {
 
 		this.adminConnection = new KVAdminCommModule(serverName, zkHost, zkPort, this);
 		this.replicator = new Replicator(this);
+
 		new Thread(this.adminConnection).start();
 	}
 
@@ -150,8 +151,6 @@ public class KVServer implements IKVServer, Runnable {
 		this.cacheSize = cacheSize;
 		this.cacheStrategy = cacheStrategy.toString();
 
-		replicator.connect();
-
 		if (!this.running)
 			this.prompt.print("Running!");
 			new Thread(this).start();
@@ -167,6 +166,7 @@ public class KVServer implements IKVServer, Runnable {
 
 	public void start() {
 		this.serverStateType = ServerStateType.STARTED;
+		replicator.connect();
 	}
 
 	public void stop() {
@@ -244,10 +244,13 @@ public class KVServer implements IKVServer, Runnable {
 		return this.writeLock;
 	}
 
-	public boolean inServer(String key) {
+	public boolean isCoordinator(String key) {
 		String keyHash = Hash.MD5(key);
-		ECSNode test = this.metadata.serverLookup(keyHash);
 		return this.metadata.inServer(keyHash, this.serverHash);
+	}
+
+	public boolean isCoordinatorOrReplica(String key) {
+		return this.metadata.isCoordinatorOrReplica(key, this.serverHash);
 	}
 
 	@Override
@@ -317,10 +320,16 @@ public class KVServer implements IKVServer, Runnable {
 	@Override
 	public void putKV(String key, String value) throws Exception {
 		try {
+
 			if (getCacheStrategy() != CacheStrategy.None)
 				this.cache.put(key, value);
 
-			this.database.put(key, value);
+			if (value.equals(DELETE_VAL)) {
+				this.database.delete(key);
+			} else {
+				this.database.put(key, value);
+			}
+
 		} catch (Exception e) {
 			e.printStackTrace();
 			if (value.equals(DELETE_VAL)) {

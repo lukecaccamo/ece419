@@ -17,6 +17,7 @@ public class Replicator {
 
     private Logger logger = Logger.getRootLogger();
 
+
     private KVCommModule firstReplica;
     private String firstReplicaName;
 
@@ -24,7 +25,7 @@ public class Replicator {
     private String secondReplicaName;
 
     private KVServer server;
-    //private String serverHash;
+    private String coordinatorHash;
 
     public Replicator(KVServer server) {
         this.server = server;
@@ -67,17 +68,17 @@ public class Replicator {
 
     public void connect() {
         HashRing metaData = server.getMetaData();
-        String serverHash = server.getServerHash();
+        this.coordinatorHash = server.getServerHash();
 
-        if(metaData == null || serverHash == null)
+        if(metaData == null || coordinatorHash == null)
             return;
 
         disconnect();
 
-        IECSNode successor = metaData.getSucc(serverHash);
+        IECSNode successor = metaData.getSucc(coordinatorHash);
 
         //there is a successor that isnt itself
-        if (successor != null && !successor.getHashKey().equals(serverHash)) {
+        if (successor != null && !successor.getHashKey().equals(coordinatorHash)) {
             Socket succSocket = null;
 
             try {
@@ -85,13 +86,14 @@ public class Replicator {
                 this.firstReplica = new KVCommModule(succSocket, null);
                 this.firstReplicaName = successor.getNodeName();
                 this.firstReplica.connect();
+                logger.info("Connected to server: " + firstReplicaName);
             } catch (Exception e) {
                 e.printStackTrace();
             }
 
             IECSNode nextSuccessor = metaData.getSucc(successor.getHashKey());
 
-            if (nextSuccessor != null && !nextSuccessor.getHashKey().equals(serverHash)) {
+            if (nextSuccessor != null && !nextSuccessor.getHashKey().equals(coordinatorHash)) {
                 Socket nextSuccSocket = null;
 
                 try {
@@ -99,6 +101,7 @@ public class Replicator {
                     this.secondReplica = new KVCommModule(nextSuccSocket, null);
                     this.secondReplicaName = nextSuccessor.getNodeName();
                     this.secondReplica.connect();
+                    logger.info("Connected to server: " + secondReplicaName);
                 } catch (Exception e) {
                     e.printStackTrace();
                 }

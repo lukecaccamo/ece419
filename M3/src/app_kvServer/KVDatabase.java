@@ -170,6 +170,11 @@ public class KVDatabase {
         saveIndex();
     }
 
+    public void delete(String key) {
+        index.remove(key);
+        saveIndex();
+    }
+
     public boolean saveIndex() {
         try {
             FileOutputStream fileOut = new FileOutputStream(this.indexFile, false);
