@@ -69,12 +69,25 @@ public class KVCommModule implements Runnable {
 					KVSimpleMessage simpleMessage = om.readValue(msg, KVSimpleMessage.class);
 
 					// Check if the server can respond to requests
-					if (server.getServerState() == IKVServer.ServerStateType.STOPPED) {
-						sendKVMessage(StatusType.SERVER_STOPPED, simpleMessage.getKey(), simpleMessage.getValue());
-					} else if (server.isWriterLocked() && simpleMessage.getStatus() == StatusType.PUT) {
-						sendKVMessage(StatusType.SERVER_WRITE_LOCK, simpleMessage.getKey(), null);
-					} else {
-						sendKVSimpleMsgResponse(simpleMessage);
+
+					switch(simpleMessage.getStatus()) {
+
+						case MOVE_VALUES:
+						case MOVE_VALUES_DONE:
+						case REPLICATE:
+						case REPLICATION_DONE:
+							sendKVSimpleMsgResponse(simpleMessage);
+							break;
+						default:
+							if (server.getServerState() == IKVServer.ServerStateType.STOPPED) {
+								sendKVMessage(StatusType.SERVER_STOPPED, simpleMessage.getKey(), simpleMessage.getValue());
+							} else if (server.isWriterLocked() && simpleMessage.getStatus() == StatusType.PUT) {
+								sendKVMessage(StatusType.SERVER_WRITE_LOCK, simpleMessage.getKey(), null);
+							} else {
+								sendKVSimpleMsgResponse(simpleMessage);
+							}
+
+							break;
 					}
 
 				} catch (IOException ioe) {
