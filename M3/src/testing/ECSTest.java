@@ -215,16 +215,21 @@ public class ECSTest extends TestCase {
         AllTests.ecs.start();
         assertEquals("68d77f380f7e215676838eca9b90ebb8", kvServer1.getNodeHashRange()[1]);
         assertEquals("ee935ceeea3cd07c8937e5ad812759a8", kvServer2.getNodeHashRange()[1]);
+        KVStore kvClient3 = new KVStore(kvServer2.getNodeHost(), kvServer2.getNodePort());
+
+
+
         ex = null;
         try {
-            toServer2 = kvClient1.put(key2, value2);
+            kvClient3.connect();
+            toServer2 = kvClient3.get(key2);
         } catch (Exception e) {
             ex = e;
             e.printStackTrace();
         }
         assertNull(ex);
-        assertEquals(StatusType.PUT_SUCCESS, toServer2.getStatus());
-        assertEquals(kvServer2.getNodePort(), kvClient1.getServerPort());
+        assertEquals(StatusType.GET_SUCCESS, toServer2.getStatus());
+        assertEquals(kvServer2.getNodePort(), kvClient3.getServerPort());
 
         AllTests.resetECS();
     }
