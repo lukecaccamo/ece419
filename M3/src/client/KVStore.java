@@ -194,7 +194,7 @@ public class KVStore implements KVCommInterface {
 			Object result = future.get(TIMEOUT, TimeUnit.SECONDS);
 			KVSimpleMessage returnMsg = (KVSimpleMessage) result;
 			return returnMsg;
-		} catch (TimeoutException e) {
+		} catch (Exception e) {
 			System.out.println("Socket timed out! Server: " + this.connectedServerName + " is down");
 			disconnect();
 
