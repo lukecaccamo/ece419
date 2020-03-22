@@ -70,7 +70,7 @@ public class KVServerTest extends TestCase {
 		String[] range = { "0", "ffffffffffffffffffffffffffffffff" };
 		kvServer1.moveData(range, serverHash2);
 
-		for (i = 0; i < 20; i++) {
+		for (int i = 0; i < 20; i++) {
 			String s2value = kvServer2.getKV(key + String.valueOf(i));
 			assertEquals(value + String.valueOf(i), s2value);
 		}
