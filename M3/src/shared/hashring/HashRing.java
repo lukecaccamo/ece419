@@ -80,6 +80,20 @@ public class HashRing {
         if (potentialServer == null){
             potentialServer = hashRing.firstKey();
         }
-        return potentialServer.compareTo(serverHash) == 0;
+        return potentialServer.equals(serverHash);
     }
+
+    public boolean isCoordinatorOrReplica(String key, String serverHash) {
+        String keyHash = Hash.MD5(key);
+        boolean isCoordinator = this.inServer(keyHash, serverHash);
+
+        String firstReplicaHash = this.getPred(serverHash).getHashKey();
+        boolean isFirstReplica = this.inServer(keyHash, firstReplicaHash);
+
+        String secondReplicaHash = this.getPred(firstReplicaHash).getHashKey();
+        boolean isSecondReplica = this.inServer(keyHash, secondReplicaHash);
+
+        return (isCoordinator || isFirstReplica || isSecondReplica);
+    }
+
 }

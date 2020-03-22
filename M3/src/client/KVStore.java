@@ -19,6 +19,7 @@ public class KVStore implements KVCommInterface {
 	private HashRing metadata; // this client's cached metadata
 	private ObjectMapper om;
 	private String connectedServerHash;
+	private String connectedServerName;
 
 	private static final int MAX_KEY = 20;
 	private static final int MAX_VALUE = 122880;
@@ -69,19 +70,21 @@ public class KVStore implements KVCommInterface {
 			// get correct server, connect to it
 			if (this.metadata != null) {
 				String keyHash = Hash.MD5(key);
-				ECSNode responsible = this.metadata.serverLookup(keyHash);
 
+				boolean isCoordinator = this.metadata.inServer(keyHash, connectedServerHash);
 				//Check if reconnect is necessary
-				if (connectedServerHash != responsible.getHashKey()) {
+				if (!isCoordinator) {
+					ECSNode responsible = this.metadata.serverLookup(keyHash);
 					System.out.println("Reconnecting...");
 					disconnect();
 					this.serverAddress = responsible.getNodeHost();
 					this.serverPort = responsible.getNodePort();
 					connect();
 					connectedServerHash = responsible.getHashKey();
+					connectedServerName = responsible.getNodeName();
 				}
 
-				System.out.println("Connected to server: " + responsible.getNodeName() + " which serves key: " + key);
+				System.out.println("Connected to server: " + connectedServerName + " which serves key: " + key);
 			}
 
 			this.communications.sendKVMessage(StatusType.PUT, key, value);
@@ -118,19 +121,23 @@ public class KVStore implements KVCommInterface {
 			// get correct server, connect to it
 			if (this.metadata != null) {
 				String keyHash = Hash.MD5(key);
-				ECSNode responsible = this.metadata.serverLookup(keyHash);
 
 				//Check if reconnect is necessary
-				if (connectedServerHash != responsible.getHashKey()) {
+				boolean isCoordinatorOrReplica = !connectedServerHash.equals(null)
+												&& metadata.isCoordinatorOrReplica(key, connectedServerHash);
+
+				if (!isCoordinatorOrReplica) {
+					ECSNode responsible = this.metadata.serverLookup(keyHash);
 					System.out.println("Reconnecting...");
 					disconnect();
 					this.serverAddress = responsible.getNodeHost();
 					this.serverPort = responsible.getNodePort();
 					connect();
 					connectedServerHash = responsible.getHashKey();
+					connectedServerName = responsible.getNodeName();
 				}
 
-				System.out.println("Connected to server: " + responsible.getNodeName() + " which serves key: " + key);
+				System.out.println("Connected to server: " + connectedServerName + " which serves key: " + key);
 			}
 
 			this.communications.sendKVMessage(StatusType.GET, key, null);

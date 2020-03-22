@@ -7,9 +7,7 @@ import org.apache.log4j.Logger;
 import shared.exceptions.DeleteException;
 import shared.exceptions.GetException;
 import shared.exceptions.PutException;
-import shared.hashring.Hash;
 import shared.hashring.HashRing;
-import shared.messages.KVAdminMessage;
 import shared.messages.KVMessage.StatusType;
 import shared.messages.KVSimpleMessage;
 
@@ -236,7 +234,9 @@ public class KVCommModule implements Runnable {
 
 		switch (status) {
 			case GET:
-				if (!server.inServer(key)){
+
+				//check if key is in this server or this server is a replica that has the key
+				if (!server.isCoordinatorOrReplica(key)){
 					String mdString = om.writeValueAsString(server.getMetaData());
 					sendKVMessage(StatusType.SERVER_NOT_RESPONSIBLE, key, mdString);
 					return;
@@ -253,11 +253,12 @@ public class KVCommModule implements Runnable {
 				break;
 
 			case PUT:
-				if (!server.inServer(key)){
+				if (!server.isCoordinator(key)){
 					String mdString = om.writeValueAsString(server.getMetaData());
 					sendKVMessage(StatusType.SERVER_NOT_RESPONSIBLE, key, mdString);
 					return;
 				}
+
 				status = StatusType.PUT_SUCCESS;
 
 				if(value.equals(DELETE_VALUE))
@@ -270,13 +271,25 @@ public class KVCommModule implements Runnable {
 
 				sendKVMessage(status, key, value);
 
+				//do replication here
+				if (!server.replicate(key, value)) {
+					logger.error("Replication failure!");
+				} else {
+					logger.info("Replication success!");
+				}
+
 				break;
 
 			case MOVE_VALUES:
-
 				server.receiveData(value);
 				sendKVMessage(StatusType.MOVE_VALUES_DONE, key, "");
+				break;
 
+			case REPLICATE:
+				server.putKV(key, value);
+				logger.info("Key: " + key + " Value: " + value + "replicated on server: " + serverAddress + serverPort);
+				sendKVMessage(StatusType.REPLICATION_DONE, key, "");
+				break;
 		}
 	}
 
