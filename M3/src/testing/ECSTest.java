@@ -1,30 +1,18 @@
 package testing;
 
-import app_kvServer.IKVServer;
-import app_kvServer.KVServer;
 import app_kvServer.IKVServer.CacheStrategy;
+import client.KVStore;
 import ecs.ECSNode;
 import ecs.IECSNode.IECSNodeFlag;
-
-import org.junit.Test;
-
-import client.KVStore;
 import junit.framework.TestCase;
+import org.junit.Test;
 import shared.hashring.Hash;
-import shared.messages.IKVAdminMessage;
-import shared.messages.KVAdminMessage;
 import shared.messages.KVMessage;
 import shared.messages.KVMessage.StatusType;
-import shared.hashring.HashRing;
-import ecs.ECSNode;
 import shared.messages.KVSimpleMessage;
-import shared.hashring.HashRing;
 
-import java.io.File;
-import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.TreeMap;
 
 public class ECSTest extends TestCase {
     private ECSNode kvServer1, kvServer2;
@@ -176,6 +164,19 @@ public class ECSTest extends TestCase {
             ex = e;
             e.printStackTrace();
         }
+
+        //Gets timeout exception user must retry
+        assertNotNull(ex);
+
+        ex = null;
+
+        try {
+            toServer2 = kvClient1.get(key2);
+        } catch (Exception e) {
+            ex = e;
+            e.printStackTrace();
+        }
+
         assertNull(ex);
         assertEquals(StatusType.GET_SUCCESS, toServer2.getStatus());
         assertEquals(kvServer1.getNodePort(), kvClient1.getServerPort());
