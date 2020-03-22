@@ -216,6 +216,7 @@ public class KVServer implements IKVServer, Runnable {
 		KVSimpleMessage returnMsg = this.serverConnection.receiveKVMessage();
 		if (returnMsg.getStatus() == KVMessage.StatusType.MOVE_VALUES_DONE) {
 			this.database.deleteMovedData(movingData);
+			this.cache.clear();
 		}
 		// receive msg from server that its done, delete data in movingData
 		this.serverConnection.disconnect();

@@ -9,7 +9,9 @@ import shared.hashring.HashRing;
 import shared.messages.KVMessage.StatusType;
 import shared.messages.KVSimpleMessage;
 
-import java.net.Socket;
+import java.io.IOException;
+import java.net.*;
+import java.util.concurrent.*;
 
 public class KVStore implements KVCommInterface {
 
@@ -23,6 +25,9 @@ public class KVStore implements KVCommInterface {
 
 	private static final int MAX_KEY = 20;
 	private static final int MAX_VALUE = 122880;
+
+	private static final int TIMEOUT = 2;
+
 	/**
 	 * Initialize KVStore with address and port of KVServer
 	 * @param address the address of the KVServer
@@ -38,7 +43,8 @@ public class KVStore implements KVCommInterface {
 
 	@Override
 	public void connect() throws Exception {
-		Socket socket = new Socket(this.serverAddress, this.serverPort);
+		Socket socket = new Socket();
+		socket.connect(new InetSocketAddress(this.serverAddress, this.serverPort));
 		this.communications = new KVCommModule(socket, null);
 		this.communications.connect();
 	}
@@ -89,13 +95,16 @@ public class KVStore implements KVCommInterface {
 
 			this.communications.sendKVMessage(StatusType.PUT, key, value);
 
-			returnMsg = this.communications.receiveKVMessage();
+			returnMsg = receiveWithTimeout();
+			if(returnMsg == null) {
+				throw new TimeoutException();
+			}
 			returnMsgStatus = returnMsg.getStatus();
 
 			if (returnMsgStatus == StatusType.SERVER_NOT_RESPONSIBLE) {
 				try {
 					this.metadata = this.om.readValue(returnMsg.getValue(), HashRing.class);
-					System.out.println("Received new metadata from server: " + metadata.serverLookup(key).getNodeName());
+					System.out.println("Received new metadata from server: " + this.metadata.serverLookup(key).getNodeName());
 				} catch (JsonProcessingException e) {
 					e.printStackTrace();
 				}
@@ -142,8 +151,12 @@ public class KVStore implements KVCommInterface {
 
 			this.communications.sendKVMessage(StatusType.GET, key, null);
 
-			returnMsg = this.communications.receiveKVMessage();
+			returnMsg = receiveWithTimeout();
+			if(returnMsg == null) {
+				throw new TimeoutException();
+			}
 			returnMsgStatus = returnMsg.getStatus();
+
 			if (returnMsgStatus == StatusType.SERVER_NOT_RESPONSIBLE) {
 				try {
 					this.metadata = this.om.readValue(returnMsg.getValue(), HashRing.class);
@@ -166,5 +179,39 @@ public class KVStore implements KVCommInterface {
 
 	public HashRing getMetaData() {
 		return this.metadata;
+	}
+
+	private KVSimpleMessage receiveWithTimeout() throws Exception {
+		ExecutorService executor = Executors.newCachedThreadPool();
+		Callable<Object> task = new Callable<Object>() {
+			public Object call() throws IOException {
+				return communications.receiveKVMessage();
+			}
+		};
+		Future<Object> future = executor.submit(task);
+
+		try {
+			Object result = future.get(TIMEOUT, TimeUnit.SECONDS);
+			KVSimpleMessage returnMsg = (KVSimpleMessage) result;
+			return returnMsg;
+		} catch (TimeoutException e) {
+			System.out.println("Socket timed out! Server: " + this.connectedServerName + " is down");
+			disconnect();
+
+			//try to connect to another server
+			if(this.metadata != null && this.connectedServerHash != null) {
+				ECSNode nextServer = this.metadata.getSucc(connectedServerHash);
+				this.serverAddress = nextServer.getNodeHost();
+				this.serverPort = nextServer.getNodePort();
+				connect();
+				this.connectedServerHash = nextServer.getHashKey();
+				this.connectedServerName = nextServer.getNodeName();
+			}
+		} finally {
+			future.cancel(true);
+			executor.shutdownNow();
+		}
+
+		return null;
 	}
 }
