@@ -4,6 +4,7 @@ import app_kvServer.IKVServer;
 import app_kvServer.KVServer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.log4j.Logger;
+import org.omg.CORBA.TIMEOUT;
 import shared.exceptions.DeleteException;
 import shared.exceptions.GetException;
 import shared.exceptions.PutException;
@@ -14,7 +15,7 @@ import shared.messages.KVSimpleMessage;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.Socket;
+import java.net.*;
 
 public class KVCommModule implements Runnable {
 
@@ -32,6 +33,7 @@ public class KVCommModule implements Runnable {
 	private static final int BUFFER_SIZE = 1024;
 	private static final int DROP_SIZE = 1024 * BUFFER_SIZE;
 	private static final String DELETE_VALUE = "null";
+	private static final int TIMEOUT = 2000;
 
 	private String serverAddress;
 	private int serverPort;
@@ -41,7 +43,7 @@ public class KVCommModule implements Runnable {
 	 * Initialize KVCommModule with address and port of KVServer
 	 * @param socket socket for the KVServer
 	 */
-	public KVCommModule(Socket socket, KVServer server) {
+	public KVCommModule(Socket socket, KVServer server) throws SocketException {
 		this.running = true;
 		this.socket = socket;
 		this.server = server;
@@ -164,6 +166,8 @@ public class KVCommModule implements Runnable {
 
 	// For client
 	public KVSimpleMessage receiveKVMessage() throws IOException {
+		//isReachable(this.serverAddress, this.serverPort);
+		//socket.getInetAddress().isReachable(TIMEOUT);
 		String msg = getMessage();
 		return om.readValue(msg, KVSimpleMessage.class);
 	}
@@ -262,7 +266,11 @@ public class KVCommModule implements Runnable {
 				status = StatusType.PUT_SUCCESS;
 
 				if(value.equals(DELETE_VALUE))
-					status = StatusType.DELETE_SUCCESS;
+					if(server.inCache(key) || server.inStorage(key)) {
+						status = StatusType.DELETE_SUCCESS;
+					} else {
+						status = StatusType.DELETE_ERROR;
+					}
 				else if(server.inCache(key) || server.inStorage(key)) {
 					status = StatusType.PUT_UPDATE;
 				}
@@ -272,10 +280,12 @@ public class KVCommModule implements Runnable {
 				sendKVMessage(status, key, value);
 
 				//do replication here
-				if (!server.replicate(key, value)) {
-					logger.error("Replication failure!");
-				} else {
-					logger.info("Replication success!");
+				if (status != StatusType.DELETE_ERROR) {
+					if (!server.replicate(key, value)) {
+						logger.error("Replication failure!");
+					} else {
+						logger.info("Replication success!");
+					}
 				}
 
 				break;
@@ -291,6 +301,13 @@ public class KVCommModule implements Runnable {
 				sendKVMessage(StatusType.REPLICATION_DONE, key, "");
 				break;
 		}
+	}
+
+	private void isReachable(String address, int port) throws IOException{
+
+		Socket socket = new Socket();
+		// Connects this socket to the server with a specified timeout value.
+		socket.connect(new InetSocketAddress(address, port), TIMEOUT);
 	}
 
 	public static final byte[] toByteArray(String s){
