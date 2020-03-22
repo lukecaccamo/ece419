@@ -11,11 +11,11 @@ import junit.framework.TestCase;
 public class ConnectionTest extends TestCase {
 
 	public void setUp() {
-
+		AllTests.resetECS();
 	}
 
 	public void tearDown() {
-		AllTests.resetDB();
+		AllTests.resetECS();
 	}
 
 	public void testConnectionSuccess() {

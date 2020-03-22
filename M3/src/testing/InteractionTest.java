@@ -19,6 +19,7 @@ public class InteractionTest extends TestCase {
 	private KVStore kvClient;
 
 	public void setUp() {
+		AllTests.resetECS();
 		String nodeKey = AllTests.ecs.getNodeKeys()[0];
 		ECSNode node = (ECSNode) AllTests.ecs.getNodeByKey(nodeKey);
 		kvClient = new KVStore(node.getNodeHost(), node.getNodePort());
@@ -30,7 +31,7 @@ public class InteractionTest extends TestCase {
 	}
 
 	public void tearDown() {
-		AllTests.resetDB();
+		AllTests.resetECS();
 	}
 
 	@Test

@@ -16,78 +16,81 @@ import org.apache.zookeeper.*;
 import org.apache.zookeeper.data.Stat;
 
 public class ECSNode implements IECSNode {
-    private static String M2_PATH = System.getProperty("user.dir");
-    private static String SSH_START_PATH = M2_PATH + "/startKVServer.sh";
-    private static String SSH_STOP_PATH = M2_PATH + "/stopKVServer.sh";
-    private static Logger logger = Logger.getRootLogger();
+    private static final String M2_PATH = System.getProperty("user.dir");
+    private static final String SSH_START_PATH = M2_PATH + "/startKVServer.sh";
+    private static final String SSH_STOP_PATH = M2_PATH + "/stopKVServer.sh";
+    private static final Logger logger = Logger.getRootLogger();
 
     private final ZooKeeper zk;
+    private final String zkNodeName;
     private final boolean debug;
+    private final ObjectMapper om = new ObjectMapper();
 
     private final String hashKey;
     private final String nodeName;
     private final String nodeHost;
     private final int nodePort;
+
     private String[] nodeHashRange;
     private IECSNodeFlag flag;
     private int cacheSize;
     private CacheStrategy cacheStrategy;
 
-    private final ObjectMapper om;
-
     public ECSNode() {
         this.zk = null;
+        this.zkNodeName = null;
         this.debug = false;
 
         this.hashKey = null;
         this.nodeName = null;
         this.nodeHost = null;
         this.nodePort = 0;
+
         this.nodeHashRange = new String[] { null, null };
         this.flag = IECSNodeFlag.SHUT_DOWN;
         this.cacheSize = 0;
         this.cacheStrategy = CacheStrategy.None;
-
-        this.om = new ObjectMapper();
     }
 
     public ECSNode(String nodeName, String nodeHost, int nodePort) {
         this.zk = null;
+        this.zkNodeName = null;
         this.debug = false;
 
         this.hashKey = Hash.MD5(nodeHost + ":" + nodePort);
         this.nodeName = nodeName;
         this.nodeHost = nodeHost;
         this.nodePort = nodePort;
+
         this.nodeHashRange = new String[] { null, null };
         this.flag = IECSNodeFlag.SHUT_DOWN;
         this.cacheSize = 0;
         this.cacheStrategy = CacheStrategy.None;
-
-        this.om = new ObjectMapper();
     }
 
     public ECSNode(String nodeName, String nodeHost, int nodePort, ZooKeeper zk, boolean debug) {
         this.zk = zk;
+        this.zkNodeName = IECS.ZOOKEEPER_ADMIN_NODE_NAME + "/" + nodeName;
         this.debug = debug;
 
         this.hashKey = Hash.MD5(nodeHost + ":" + nodePort);
         this.nodeName = nodeName;
         this.nodeHost = nodeHost;
         this.nodePort = nodePort;
+
         this.nodeHashRange = new String[] { null, null };
         this.flag = IECSNodeFlag.SHUT_DOWN;
         this.cacheSize = 0;
         this.cacheStrategy = CacheStrategy.None;
 
-        this.om = new ObjectMapper();
+        this.stopKVServer();
     }
 
-    public boolean startKVServer(String zkHost, int zkPort) {
+    public boolean startKVServer() {
         if (this.flag != IECSNodeFlag.SHUT_DOWN)
             return false;
-        String[] command = { SSH_START_PATH, this.nodeName, this.nodeHost, Integer.toString(this.nodePort), zkHost,
-                Integer.toString(zkPort) };
+        String[] command = { SSH_START_PATH, this.nodeName, this.nodeHost, Integer.toString(this.nodePort), IECS.ZOOKEEPER_HOST,
+                Integer.toString(IECS.ZOOKEEPER_PORT) };
 
         try {
             ProcessBuilder kvServerProcessBuilder = new ProcessBuilder(command);
@@ -122,12 +125,11 @@ public class ECSNode implements IECSNode {
 
     public ECSNode setData(ActionType action, HashRing hashRing) {
         try {
-            String zkNodeName = IECS.ZOOKEEPER_ADMIN_NODE_NAME + "/" + this.getNodeName();
-            Stat zkStat = this.zk.exists(zkNodeName, false);
+            Stat zkStat = this.zk.exists(this.zkNodeName, false);
             KVAdminMessage adminMessage = new KVAdminMessage(action, this.getHashKey(), hashRing);
             String jsonMetaData = this.om.writeValueAsString(adminMessage).trim();
             byte[] jsonBytes = KVCommModule.toByteArray(jsonMetaData);
-            this.zk.setData(zkNodeName, jsonBytes, zkStat.getVersion());
+            this.zk.setData(this.zkNodeName, jsonBytes, zkStat.getVersion());
             return this.await(jsonMetaData);
         } catch (JsonProcessingException | KeeperException | InterruptedException e) {
             this.logger.error(e);
@@ -138,12 +140,11 @@ public class ECSNode implements IECSNode {
 
     public ECSNode moveData(String moveTo, HashRing hashRing) {
         try {
-            String zkNodeName = IECS.ZOOKEEPER_ADMIN_NODE_NAME + "/" + this.getNodeName();
-            Stat zkStat = this.zk.exists(zkNodeName, false);
+            Stat zkStat = this.zk.exists(this.zkNodeName, false);
             KVAdminMessage adminMessage = new KVAdminMessage(ActionType.MOVE_DATA, moveTo, hashRing);
             String jsonMetaData = this.om.writeValueAsString(adminMessage).trim();
             byte[] jsonBytes = KVCommModule.toByteArray(jsonMetaData);
-            this.zk.setData(zkNodeName, jsonBytes, zkStat.getVersion());
+            this.zk.setData(this.zkNodeName, jsonBytes, zkStat.getVersion());
             return this.await(jsonMetaData);
         } catch (JsonProcessingException | KeeperException | InterruptedException e) {
             this.logger.error(e);
@@ -154,21 +155,23 @@ public class ECSNode implements IECSNode {
 
     private ECSNode await(String oldState) {
         try {
-            String zkNodeName = IECS.ZOOKEEPER_ADMIN_NODE_NAME + "/" + this.getNodeName();
             String newState = oldState;
             while (oldState.equals(newState)) {
-                Stat zkStat = this.zk.exists(zkNodeName, false);
-                newState = new String(this.zk.getData(zkNodeName, false, zkStat)).trim();
+                Stat zkStat = this.zk.exists(this.zkNodeName, false);
+                newState = new String(this.zk.getData(this.zkNodeName, false, zkStat)).trim();
             }
+
             KVAdminMessage adminMessage = this.om.readValue(newState, KVAdminMessage.class);
-            if (this.debug)
-                System.out.println(adminMessage);
+            this.logger.info(adminMessage);
+
             ECSNode updatedNode = adminMessage.getMetaData().hashRing.get(this.getHashKey());
             this.nodeHashRange = updatedNode.getNodeHashRange();
             this.flag = updatedNode.getFlag();
             this.cacheSize = updatedNode.getCacheSize();
             this.cacheStrategy = updatedNode.getCacheStrategy();
 
+            if (this.getFlag().equals(IECSNodeFlag.SHUT_DOWN))
+                this.zk.delete(this.zkNodeName, -1);
             return this;
         } catch (JsonProcessingException | KeeperException | InterruptedException e) {
             this.logger.error(e);
