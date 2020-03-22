@@ -178,7 +178,7 @@ public class ECSTest extends TestCase {
         }
         assertNull(ex);
         assertEquals(StatusType.GET_SUCCESS, toServer2.getStatus());
-        assertEquals(kvServer2.getNodePort(), kvClient1.getServerPort());
+        assertEquals(kvServer1.getNodePort(), kvClient1.getServerPort());
 
         AllTests.resetECS();
     }
