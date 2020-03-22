@@ -26,7 +26,7 @@ public class ECSClient implements IECSClient {
     private static Logger logger;
     private final boolean debug;
 
-    private Prompt prompt = new Prompt("ECSAdmin");
+    public static final Prompt prompt = new Prompt("ECSAdmin");
     private BufferedReader stdin;
     private boolean stop = false;
     private ECS ecs;
@@ -38,8 +38,11 @@ public class ECSClient implements IECSClient {
     public ECSClient(String configFilePath, boolean debug) {
         this.logger = Logger.getRootLogger();
         this.debug = debug;
+
         this.ecs = new ECS(configFilePath, this.debug);
         this.ecs.setupNodes(DEFAULT_CLUSTER_SIZE, DEFAULT_CACHE_STRATEGY, DEFAULT_CACHE_SIZE);
+        ECS.running = true;
+        new Thread(this.ecs).start();
     }
 
     public void run() {
@@ -51,11 +54,14 @@ public class ECSClient implements IECSClient {
             this.prompt.print();
 
             try {
+                ECS.heartbeat = true;
                 String cmdLine = this.stdin.readLine();
+                ECS.heartbeat = false;
                 this.handleCommand(cmdLine);
             } catch (IOException e) {
                 this.stop = true;
                 this.prompt.printError("CLI does not respond - Application terminated ");
+                System.exit(-1);
             } catch (Exception e) {
                 this.logger.error(e);
                 e.printStackTrace();
@@ -65,9 +71,9 @@ public class ECSClient implements IECSClient {
 
     private void handleCommand(String cmdLine) throws Exception {
         String[] tokens = cmdLine.split("\\s+");
-
         switch (tokens[0]) {
             case "quit":
+                ECS.running = false;
                 this.stop = true;
                 this.shutdown();
                 this.prompt.printPrimary("Stopped all server instances!");
