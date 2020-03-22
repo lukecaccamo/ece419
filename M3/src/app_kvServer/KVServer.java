@@ -151,9 +151,10 @@ public class KVServer implements IKVServer, Runnable {
 		this.cacheSize = cacheSize;
 		this.cacheStrategy = cacheStrategy.toString();
 
-		if (!this.running)
+		if (!this.running) {
 			this.prompt.print("Running!");
-		new Thread(this).start();
+			new Thread(this).start();
+		}
 	}
 
 	public boolean replicate(String key, String value) {
