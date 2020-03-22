@@ -23,6 +23,7 @@ public class KVClientTest extends TestCase {
 	private KVStore kvClient;
 
 	public void setUp() {
+		AllTests.resetECS();
 		Exception ex = null;
 
 		String nodeKey = AllTests.ecs.getNodeKeys()[0];
@@ -43,7 +44,7 @@ public class KVClientTest extends TestCase {
 	}
 
 	public void tearDown() {
-		AllTests.resetDB();
+		AllTests.resetECS();
 	}
 
 	@Test

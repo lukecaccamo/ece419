@@ -26,6 +26,13 @@ public class AllTests {
 
 	static ECS ecs = new ECS(AllTests.CONFIG_FILE_PATH, DEBUG);
 
+	static void resetECS() {
+		AllTests.ecs.shutdown();
+		AllTests.resetDB();
+		AllTests.ecs.setupNodes(2, "FIFO", 0);
+		AllTests.ecs.start();
+	}
+
 	static void resetDB() {
 		try {
 			InputStream configFile = new FileInputStream(AllTests.CONFIG_FILE_PATH);
@@ -51,16 +58,14 @@ public class AllTests {
 	static final String CONFIG_FILE_PATH = "./ecs.config";
 
 	public static Test suite() {
-		AllTests.ecs.setupNodes(2, "FIFO", 0);
-		AllTests.ecs.start();
-		AllTests.resetDB();
+		AllTests.resetECS();
 
 		TestSuite clientSuite = new TestSuite("Advanced Storage Server Test-Suite");
 		clientSuite.addTestSuite(ConnectionTest.class);
 		clientSuite.addTestSuite(InteractionTest.class);
+		clientSuite.addTestSuite(KVServerTest.class);
 		clientSuite.addTestSuite(KVClientTest.class);
 		clientSuite.addTestSuite(ECSTest.class);
-		// clientSuite.addTestSuite(KVServerTest.class);
 		return clientSuite;
 	}
 }

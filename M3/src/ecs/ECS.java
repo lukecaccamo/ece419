@@ -28,6 +28,7 @@ import shared.messages.IKVAdminMessage.ActionType;
 public class ECS implements IECS {
     private static Logger logger = Logger.getRootLogger();
     private final boolean debug;
+    private final String configFilePath;
 
     private Properties properties;
     public HashRing usedServers;
@@ -38,20 +39,26 @@ public class ECS implements IECS {
 
     public ECS(String configFilePath, boolean debug) {
         this.debug = debug;
+        this.configFilePath = configFilePath;
 
         this.properties = new Properties();
         this.usedServers = new HashRing();
-        this.freeServers = new PriorityQueue<ECSNode>(new Comparator<ECSNode>() {
+        Comparator<ECSNode> serverNameComparator = new Comparator<ECSNode>() {
             @Override
             public int compare(ECSNode a, ECSNode b) {
                 return a.getNodeName().compareTo(b.getNodeName());
             }
-        });
+        };
+        this.freeServers = new PriorityQueue<ECSNode>(serverNameComparator);
 
-        this.initializeZooKeeper();
-        this.initializeECSNode();
-        this.initializeServers(configFilePath);
-        this.resetZooKeeperNodes();
+        try {
+            this.initializeZooKeeper();
+            this.initializeAdminNode();
+            this.initializeECSNodes();
+        } catch (Exception e) {
+            this.logger.error(e);
+            e.printStackTrace();
+        }
     }
 
     @Override
@@ -73,7 +80,7 @@ public class ECS implements IECS {
     public IECSNode addNode(String cacheStrategy, int cacheSize) {
         ECSNode node = null;
         if (this.freeServers.isEmpty())
-                return null;
+            return null;
         try {
             node = this.freeServers.remove();
             node.setCacheStrategy(cacheStrategy);
@@ -81,7 +88,7 @@ public class ECS implements IECS {
             this.usedServers.hashRing.put(node.getHashKey(), node);
 
             this.updateRingRanges(null);
-            node.startKVServer(IECS.ZOOKEEPER_HOST, IECS.ZOOKEEPER_PORT);
+            node.startKVServer();
             awaitNodes(1, 10000);
 
             node = node.setData(ActionType.INIT, this.usedServers);
@@ -129,7 +136,7 @@ public class ECS implements IECS {
 
         for (Map.Entry<String, ECSNode> entry : this.usedServers.hashRing.entrySet()) {
             ECSNode node = entry.getValue();
-            node.startKVServer(IECS.ZOOKEEPER_HOST, IECS.ZOOKEEPER_PORT);
+            node.startKVServer();
             nodes.add(node);
         }
 
@@ -188,21 +195,6 @@ public class ECS implements IECS {
         return true;
     }
 
-    public boolean removeAllNodes() {
-        Iterator<Map.Entry<String, ECSNode>> it = this.usedServers.hashRing.entrySet().iterator();
-        while (it.hasNext()) {
-            Map.Entry<String, ECSNode> e = it.next();
-            String removed = e.getKey();
-            ECSNode node = e.getValue();
-            ECSNode to = this.usedServers.getSucc(node.getHashKey());
-
-            it.remove();
-            this.freeServers.add(node);
-        }
-        this.shutdown();
-        return true;
-    }
-
     @Override
     public Map<String, IECSNode> getNodes() {
         Map<String, IECSNode> nodes = new TreeMap<String, IECSNode>();
@@ -221,34 +213,31 @@ public class ECS implements IECS {
         return this.usedServers.hashRing.get(Key);
     }
 
-    private void initializeZooKeeper() {
-        try {
-            ProcessBuilder zkProcessBuilder = new ProcessBuilder(IECS.ZOOKEEPER_SCRIPT_PATH, "restart",
-                    IECS.ZOOKEEPER_CONF_PATH);
-            if (this.debug)
-                zkProcessBuilder.inheritIO();
-            Process zkProcess = zkProcessBuilder.start();
-            zkProcess.waitFor();
-
-            this.connected = new CountDownLatch(1);
-            Watcher watcher = new Watcher() {
-                @Override
-                public void process(WatchedEvent e) {
-                    if (e.getState() == KeeperState.SyncConnected)
-                        connected.countDown();
-                }
-            };
-            this.zk = new ZooKeeper(IECS.ZOOKEEPER_HOST, 10000, watcher);
-            connected.await();
-        } catch (Exception e) {
-            this.logger.error(e);
-            e.printStackTrace();
-        }
+    private void initializeZooKeeper() throws Exception {
+        ProcessBuilder zkProcessBuilder = new ProcessBuilder(IECS.ZOOKEEPER_SCRIPT_PATH, "restart",
+                IECS.ZOOKEEPER_CONF_PATH);
+        if (this.debug)
+            zkProcessBuilder.inheritIO();
+        Process zkProcess = zkProcessBuilder.start();
+        zkProcess.waitFor();
+        this.connected = new CountDownLatch(1);
+        Watcher watcher = new Watcher() {
+            @Override
+            public void process(WatchedEvent e) {
+                if (e.getState() == KeeperState.SyncConnected)
+                    connected.countDown();
+            }
+        };
+        this.zk = new ZooKeeper(IECS.ZOOKEEPER_HOST, 10000, watcher);
+        connected.await();
     }
 
-    private void initializeECSNode() {
+    private void initializeAdminNode() throws Exception {
+        if (this.zk == null)
+            throw new Exception("ZooKeeper uninitialized!");
+
         try {
-            if (this.zk != null && this.zk.exists(IECS.ZOOKEEPER_ADMIN_NODE_NAME, false) != null) {
+            if (this.zk.exists(IECS.ZOOKEEPER_ADMIN_NODE_NAME, false) != null) {
                 List<String> list = this.zk.getChildren(IECS.ZOOKEEPER_ADMIN_NODE_NAME, false);
                 for (String nodeName : list) {
                     this.zk.delete(IECS.ZOOKEEPER_ADMIN_NODE_NAME + "/" + nodeName, -1);
@@ -259,54 +248,20 @@ public class ECS implements IECS {
             logger.info(e);
         }
 
-        try {
-            if (this.zk != null) {
-                this.zk.create(IECS.ZOOKEEPER_ADMIN_NODE_NAME, new byte[0], ZooDefs.Ids.OPEN_ACL_UNSAFE,
-                        CreateMode.PERSISTENT);
-            }
-        } catch (KeeperException | InterruptedException e) {
-            this.logger.error(e);
-            e.printStackTrace();
-        }
+        this.zk.create(IECS.ZOOKEEPER_ADMIN_NODE_NAME, new byte[0], ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
     }
 
-    private void initializeServers(String configFilePath) {
-        try {
-            InputStream configFile = new FileInputStream(configFilePath);
-            this.properties.load(configFile);
-            configFile.close();
-            for (String key : this.properties.stringPropertyNames()) {
-                String[] value = this.properties.getProperty(key).split("\\s+");
-                String host = value[0];
-                String port = value[1];
+    private void initializeECSNodes() throws Exception {
+        InputStream configFile = new FileInputStream(this.configFilePath);
+        this.properties.load(configFile);
+        configFile.close();
+        for (String key : this.properties.stringPropertyNames()) {
+            String[] value = this.properties.getProperty(key).split("\\s+");
+            String host = value[0];
+            String port = value[1];
 
-                ECSNode node = new ECSNode(key, host, Integer.parseInt(port), this.zk, this.debug);
-                this.freeServers.add(node);
-
-                node.stopKVServer();
-            }
-        } catch (Exception e) {
-            this.logger.error(e);
-            e.printStackTrace();
-        }
-    }
-
-    private void resetZooKeeperNodes() {
-        Iterator<ECSNode> nodes = this.freeServers.iterator();
-        try {
-            while (nodes.hasNext()) {
-                ECSNode node = nodes.next();
-                String zkNodeName = "/" + node.getNodeName();
-                try {
-                    if (this.zk.exists(zkNodeName, true) != null)
-                        this.zk.delete(zkNodeName, -1);
-                } catch (KeeperException e) {
-                    logger.info(e);
-                }
-            }
-        } catch (Exception e) {
-            this.logger.error(e);
-            e.printStackTrace();
+            ECSNode node = new ECSNode(key, host, Integer.parseInt(port), this.zk, this.debug);
+            this.freeServers.add(node);
         }
     }
 
