@@ -63,9 +63,9 @@ public class AllTests {
 		TestSuite clientSuite = new TestSuite("Advanced Storage Server Test-Suite");
 		clientSuite.addTestSuite(ConnectionTest.class);
 		clientSuite.addTestSuite(InteractionTest.class);
-		clientSuite.addTestSuite(KVServerTest.class);
-		clientSuite.addTestSuite(KVClientTest.class);
 		clientSuite.addTestSuite(ECSTest.class);
+		clientSuite.addTestSuite(KVClientTest.class);
+		clientSuite.addTestSuite(KVServerTest.class);
 		return clientSuite;
 	}
 }

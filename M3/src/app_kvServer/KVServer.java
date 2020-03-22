@@ -151,9 +151,10 @@ public class KVServer implements IKVServer, Runnable {
 		this.cacheSize = cacheSize;
 		this.cacheStrategy = cacheStrategy.toString();
 
-		if (!this.running)
+		if (!this.running) {
 			this.prompt.print("Running!");
 			new Thread(this).start();
+		}
 	}
 
 	public boolean replicate(String key, String value) {
@@ -373,7 +374,10 @@ public class KVServer implements IKVServer, Runnable {
 			}
 		}
 		logger.info("Server stopped.");
-		System.exit(1);
+
+		if (this.adminConnection != null)
+			this.adminConnection.close();
+			System.exit(0);
 	}
 
 	@Override
@@ -389,9 +393,10 @@ public class KVServer implements IKVServer, Runnable {
 	@Override
 	public void close() {
 		this.running = false;
+
 		if (this.adminConnection != null)
 			this.adminConnection.close();
-		System.exit(1);
+			System.exit(0);
 	}
 
 	/**

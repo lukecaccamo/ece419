@@ -7,7 +7,9 @@ import org.junit.Test;
 
 import app_kvClient.KVClient;
 import client.KVStore;
+import ecs.ECSNode;
 import junit.framework.TestCase;
+import shared.hashring.HashRing;
 import shared.messages.KVMessage;
 import shared.messages.KVMessage.StatusType;
 
@@ -15,56 +17,44 @@ import java.io.File;
 
 public class KVServerTest extends TestCase {
 
-	private KVServer kvServer;
-
 	public void setUp() {
-		AllTests.resetDB();
+		
 	}
 
 	public void tearDown() {
-		AllTests.resetDB();
-	}
-
-	@Test
-	public void testPersistence() throws Exception {
-		String storedValue = null;
-
-		String key = "foo2";
-		String value = "bar2";
-		KVMessage message = null;
-
-		kvServer = new KVServer(50000, 0, CacheStrategy.FIFO.toString());
-		kvServer.putKV(key, value);
-		storedValue = kvServer.getKV(key);
-		assertEquals(value, storedValue);
-
-		kvServer.clearCache();
-		kvServer.close();
-
-		kvServer = new KVServer(50000, 0, CacheStrategy.FIFO.toString());
-		storedValue = kvServer.getKV(key);
-		assertEquals(value, storedValue);
 	}
 
 	@Test
 	public void testMoveData() throws Exception {
-		KVStore kvClient = new KVStore("localhost", 50001);
-		KVServer kvServer1 = new KVServer(50001, 0, CacheStrategy.FIFO.toString());
-		KVServer kvServer2 = new KVServer(50002, 0, CacheStrategy.FIFO.toString());
+		int port1 = 50001;
+		int port2 = 50002;
+
+		HashRing metaData = new HashRing();
+        ECSNode node1 = new ECSNode("Server1", "localhost", port1);
+		ECSNode node2 = new ECSNode("Server2", "localhost", port2);
+		node1.stopKVServer();
+		node2.stopKVServer();
+
+		KVServer kvServer1 = new KVServer(port1, 0, CacheStrategy.FIFO.toString());
+		KVServer kvServer2 = new KVServer(port2, 0, CacheStrategy.FIFO.toString());
 		kvServer1.start();
 		kvServer2.start();
-		kvClient.connect();
 
 		kvServer1.setServerHash("b05e2b689f6eff6650abea85f180ebd0");
 		kvServer2.setServerHash("43cd9550c83c977b451a47535f10884c");
 		String serverHash1 = kvServer1.getServerHash();
-		String serverHash2 = kvServer2.getServerHash();
+        String serverHash2 = kvServer2.getServerHash();
+
+        metaData.addServer(serverHash1, node1);
+        metaData.addServer(serverHash2, node2);
+        kvServer1.setMetaData(metaData);
+		kvServer2.setMetaData(metaData);
 
 		String key = "key";
 		String value = "value";
 
 		for (int i = 0; i < 20; i++) {
-			kvClient.put(key + String.valueOf(i), value + String.valueOf(i));
+			kvServer1.putKV(key + String.valueOf(i), value + String.valueOf(i));
 		}
 
 		String[] range = { "0", "ffffffffffffffffffffffffffffffff" };
@@ -77,11 +67,10 @@ public class KVServerTest extends TestCase {
 
 		String s2value = kvServer1.getKV("key0");
 		assertNull(s2value);
+	}
 
-		kvClient.disconnect();
-		kvServer1.clearCache();
-		kvServer1.close();
-		kvServer2.clearCache();
-		kvServer2.close();
+	@Test
+	public void testPersistence() throws Exception {
+		// Persistence test goes here
 	}
 }
