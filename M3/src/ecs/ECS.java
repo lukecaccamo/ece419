@@ -23,6 +23,7 @@ import app_kvECS.ECSClient;
 import java.util.concurrent.CountDownLatch;
 
 import app_kvServer.IKVServer;
+import app_kvServer.IKVServer.CacheStrategy;
 import ecs.IECS.*;
 import ecs.IECSNode.IECSNodeFlag;
 import shared.hashring.HashRing;
@@ -72,7 +73,8 @@ public class ECS implements IECS, Runnable {
             if (this.heartbeat) {
                 try {
                     this.monitorNodes();
-                } catch (Exception e) {}
+                } catch (Exception e) {
+                }
             }
         }
     }
@@ -125,7 +127,7 @@ public class ECS implements IECS, Runnable {
             // step 1, 2
             ECSNode pred = this.usedServers.getPred(node.getHashKey());
             ECSNode pred2 = this.usedServers.getPred(pred.getHashKey());
-            
+
             // ONLY SEND RANGE OF PRED
             pred.moveReplicas(node.getHashKey(), this.usedServers);
             // ONLY SEND THE RANGE OF PRED 2
@@ -198,6 +200,9 @@ public class ECS implements IECS, Runnable {
                 ECSNode node = e.getValue();
                 if (node.zkStat() == null) {
                     it.remove();
+                    int newCacheSize = node.getCacheSize();
+                    CacheStrategy newCacheStrategy = node.getCacheStrategy();
+
                     node.resetNode();
                     this.freeServers.add(node);
                     updateRingRanges(null);
@@ -206,6 +211,11 @@ public class ECS implements IECS, Runnable {
 
                     System.out.println();
                     ECSClient.prompt.printError("Died: " + node.toString());
+                    ECSClient.prompt.print();
+
+                    ECSNode newNode = (ECSNode) this.addNode(newCacheStrategy.toString(), newCacheSize);
+                    System.out.println();
+                    ECSClient.prompt.printPrimary("Restarted: " + newNode.toString());
                     ECSClient.prompt.print();
                 }
             }
@@ -222,8 +232,6 @@ public class ECS implements IECS, Runnable {
                 ECSNode node = e.getValue();
                 if (node.getNodeName().equals(name)) {
                     ECSNode succ = this.usedServers.getSucc(node.getHashKey());
-
-                    
 
                     succ.setData(ActionType.LOCK_WRITE, this.usedServers);
                     node.setData(ActionType.LOCK_WRITE, this.usedServers);
@@ -247,7 +255,7 @@ public class ECS implements IECS, Runnable {
                     succ.moveReplicas(succ2.getHashKey(), this.usedServers);
                     ECSNode succ3 = this.usedServers.getSucc(succ2.getHashKey());
                     succ.moveReplicas(succ3.getHashKey(), this.usedServers);
-                    
+
                     node = node.setData(ActionType.SHUTDOWN, this.usedServers);
                     this.freeServers.add(node);
 
