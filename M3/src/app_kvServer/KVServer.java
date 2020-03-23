@@ -212,12 +212,13 @@ public class KVServer implements IKVServer, Runnable {
 		this.serverConnection = new KVCommModule(socket, null);
 		this.serverConnection.connect();
 
-		this.serverConnection.sendKVMessage(KVMessage.StatusType.MOVE_VALUES, range[0], dataJSON);
+		this.serverConnection.sendKVMessage(KVMessage.StatusType.MOVE_VALUES, serverKey, dataJSON);
 
 		KVSimpleMessage returnMsg = this.serverConnection.receiveKVMessage();
 		if (returnMsg.getStatus() == KVMessage.StatusType.MOVE_VALUES_DONE) {
-			this.database.deleteMovedData(movingData);
-			this.cache.clear();
+			//this.database.deleteMovedData(movingData);
+			//this.cache.clear();
+			this.logger.info("Move data done");
 		}
 		// receive msg from server that its done, delete data in movingData
 		this.serverConnection.disconnect();
@@ -364,16 +365,16 @@ public class KVServer implements IKVServer, Runnable {
 					Socket client = this.serverSocket.accept();
 					KVCommModule connection = new KVCommModule(client, this);
 					new Thread(connection).start();
-					logger.info(
+					this.logger.info(
 							"Connected to " + client.getInetAddress().getHostName() + " on port " + client.getPort());
 				}
 				this.serverSocket.close();
 				this.serverSocket = null;
 			} catch (IOException e) {
-				logger.error("Error! " + "Unable to establish connection. \n", e);
+				this.logger.error("Error! " + "Unable to establish connection. \n", e);
 			}
 		}
-		logger.info("Server stopped.");
+		this.logger.info("Server stopped.");
 
 		if (this.adminConnection != null)
 			this.adminConnection.close();
@@ -386,7 +387,7 @@ public class KVServer implements IKVServer, Runnable {
 			if (this.serverSocket != null && !this.serverSocket.isClosed())
 				this.serverSocket.close();
 		} catch (IOException e) {
-			logger.error("Error! " + "Unable to close socket on port: " + this.getPort(), e);
+			this.logger.error("Error! " + "Unable to close socket on port: " + this.getPort(), e);
 		}
 	}
 
@@ -437,17 +438,17 @@ public class KVServer implements IKVServer, Runnable {
 	}
 
 	private void initializeConnection() {
-		logger.info("Opening server socket...");
+		this.logger.info("Opening server socket...");
 		try {
 			this.serverSocket = new ServerSocket(port);
 			this.running = true;
-			logger.info("Server listening on port: " + this.serverSocket.getLocalPort());
+			this.logger.info("Server listening on port: " + this.serverSocket.getLocalPort());
 		} catch (IOException e) {
 			this.serverSocket = null;
 			this.running = false;
-			logger.error("Error! Cannot open server socket:");
+			this.logger.error("Error! Cannot open server socket:");
 			if (e instanceof BindException)
-				logger.error("Port " + port + " is already bound!");
+				this.logger.error("Port " + port + " is already bound!");
 		}
 	}
 }

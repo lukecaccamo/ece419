@@ -96,14 +96,25 @@ public class ECS implements IECS {
 
             this.broadcast(ActionType.UPDATE);
 
-            ECSNode from = this.usedServers.getPred(node.getHashKey());
-            from.setData(ActionType.LOCK_WRITE, this.usedServers);
+            ECSNode succ = this.usedServers.getSucc(node.getHashKey());
+            succ.setData(ActionType.LOCK_WRITE, this.usedServers);
             node.setData(ActionType.LOCK_WRITE, this.usedServers);
 
-            from.moveData(node.getHashKey(), this.usedServers);
+            // step 0
+            succ.moveData(node.getHashKey(), this.usedServers);
 
-            from.setData(ActionType.UNLOCK_WRITE, this.usedServers);
+            succ.setData(ActionType.UNLOCK_WRITE, this.usedServers);
             node.setData(ActionType.UNLOCK_WRITE, this.usedServers);
+
+            // step 1, 2
+            ECSNode pred = this.usedServers.getPred(node.getHashKey());
+            ECSNode pred2 = this.usedServers.getPred(pred.getHashKey());
+            
+            // ONLY SEND RANGE OF PRED
+            pred.moveReplicas(node.getHashKey(), this.usedServers);
+            // ONLY SEND THE RANGE OF PRED 2
+            pred2.moveReplicas(node.getHashKey(), this.usedServers);
+
         } catch (Exception e) {
             this.logger.error(e);
             e.printStackTrace();
@@ -171,18 +182,33 @@ public class ECS implements IECS {
                 String removed = e.getKey();
                 ECSNode node = e.getValue();
                 if (node.getNodeName().equals(name)) {
-                    ECSNode to = this.usedServers.getSucc(node.getHashKey());
+                    ECSNode succ = this.usedServers.getSucc(node.getHashKey());
 
-                    updateRingRanges(node);
+                    
 
-                    to.setData(ActionType.LOCK_WRITE, this.usedServers);
+                    succ.setData(ActionType.LOCK_WRITE, this.usedServers);
                     node.setData(ActionType.LOCK_WRITE, this.usedServers);
 
-                    node.moveData(to.getHashKey(), this.usedServers);
+                    // 0.) move node's ranged data to succ
+                    node.moveReplicas(succ.getHashKey(), this.usedServers);
 
-                    to.setData(ActionType.UNLOCK_WRITE, this.usedServers);
+                    succ.setData(ActionType.UNLOCK_WRITE, this.usedServers);
                     node.setData(ActionType.UNLOCK_WRITE, this.usedServers);
 
+                    updateRingRanges(node);
+                    this.broadcast(ActionType.UPDATE);
+
+                    // 1.) pred pred to succ
+                    ECSNode pred = this.usedServers.getPred(succ.getHashKey());
+                    ECSNode pred2 = this.usedServers.getPred(pred.getHashKey());
+                    pred2.moveReplicas(succ.getHashKey(), this.usedServers);
+
+                    // 2.) move data from succ to succ2 and succ3
+                    ECSNode succ2 = this.usedServers.getSucc(succ.getHashKey());
+                    succ.moveReplicas(succ2.getHashKey(), this.usedServers);
+                    ECSNode succ3 = this.usedServers.getSucc(succ2.getHashKey());
+                    succ.moveReplicas(succ3.getHashKey(), this.usedServers);
+                    
                     node = node.setData(ActionType.SHUTDOWN, this.usedServers);
                     this.freeServers.add(node);
 
@@ -245,7 +271,7 @@ public class ECS implements IECS {
                 this.zk.delete(IECS.ZOOKEEPER_ADMIN_NODE_NAME, -1);
             }
         } catch (KeeperException | InterruptedException e) {
-            logger.info(e);
+            this.logger.info(e);
         }
 
         this.zk.create(IECS.ZOOKEEPER_ADMIN_NODE_NAME, new byte[0], ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);

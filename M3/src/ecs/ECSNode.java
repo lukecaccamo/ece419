@@ -153,6 +153,21 @@ public class ECSNode implements IECSNode {
         return null;
     }
 
+    public ECSNode moveReplicas(String moveTo, HashRing hashRing) {
+        try {
+            Stat zkStat = this.zk.exists(this.zkNodeName, false);
+            KVAdminMessage adminMessage = new KVAdminMessage(ActionType.MOVE_REPLICAS, moveTo, hashRing);
+            String jsonMetaData = this.om.writeValueAsString(adminMessage).trim();
+            byte[] jsonBytes = KVCommModule.toByteArray(jsonMetaData);
+            this.zk.setData(this.zkNodeName, jsonBytes, zkStat.getVersion());
+            return this.await(jsonMetaData);
+        } catch (JsonProcessingException | KeeperException | InterruptedException e) {
+            this.logger.error(e);
+            e.printStackTrace();
+        }
+        return null;
+    }
+
     private ECSNode await(String oldState) {
         try {
             String newState = oldState;

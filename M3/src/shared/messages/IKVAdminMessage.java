@@ -14,6 +14,7 @@ public interface IKVAdminMessage {
 		GET_SERVER_STATE,
 		IS_WRITER_LOCKED,
 		GET_METADATA,
+		MOVE_REPLICAS,
 
 		INIT_ACK,
 		START_ACK,
@@ -25,7 +26,8 @@ public interface IKVAdminMessage {
 		UPDATE_ACK,
 		GET_SERVER_STATE_ACK,
 		IS_WRITER_LOCKED_ACK,
-		GET_METADATA_ACK
+		GET_METADATA_ACK,
+		MOVE_REPLICAS_ACK
 	}
 
 	/**
