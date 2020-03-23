@@ -182,15 +182,36 @@ public class ECS implements IECS {
                 String removed = e.getKey();
                 ECSNode node = e.getValue();
                 if (node.getNodeName().equals(name)) {
+                    // NODE = PRED
+                    // SUCC = SERVER 2
                     ECSNode succ = this.usedServers.getSucc(node.getHashKey());
-
-                    
+                    // PRED = SERVER 3
+                    ECSNode pred = this.usedServers.getPred(succ.getHashKey());
+                    // PRED2 = SERVER4
+                    ECSNode pred2 = this.usedServers.getPred(pred.getHashKey());
+                    // PRED3 = SERVER 5
+                    ECSNode pred3 = this.usedServers.getPred(pred2.getHashKey());
+                    // SUCC2 = SERVER 1
+                    ECSNode succ2 = this.usedServers.getSucc(succ.getHashKey());
+                    // succ3 = SERVER 5
+                    ECSNode succ3 = this.usedServers.getSucc(succ2.getHashKey());   
 
                     succ.setData(ActionType.LOCK_WRITE, this.usedServers);
                     node.setData(ActionType.LOCK_WRITE, this.usedServers);
 
                     // 0.) move node's ranged data to succ
-                    node.moveReplicas(succ.getHashKey(), this.usedServers);
+                    // NOT NECESSARY SINCE SUCCESSOR WOULD ALREADY HAVE DATA
+                    // CORRECT
+                    pred.moveReplicas(succ.getHashKey(), this.usedServers);
+
+                    /*
+                    System.out.println("succ: " + succ.getHashKey());
+                    System.out.println("succ2: " + succ2.getHashKey());
+                    System.out.println("succ3: " + succ3.getHashKey());
+                    System.out.println("node: " + node.getHashKey());
+                    System.out.println("pred: " + pred.getHashKey());
+                    System.out.println("pred2: " + pred2.getHashKey());
+                    System.out.println("pred3: " + pred3.getHashKey());*/
 
                     succ.setData(ActionType.UNLOCK_WRITE, this.usedServers);
                     node.setData(ActionType.UNLOCK_WRITE, this.usedServers);
@@ -199,15 +220,18 @@ public class ECS implements IECS {
                     this.broadcast(ActionType.UPDATE);
 
                     // 1.) pred pred to succ
-                    ECSNode pred = this.usedServers.getPred(succ.getHashKey());
-                    ECSNode pred2 = this.usedServers.getPred(pred.getHashKey());
-                    pred2.moveReplicas(succ.getHashKey(), this.usedServers);
+                    // right now goes to server4
+                    // succ needs to be server 2
+                    // CORRECT
+                    pred3.moveReplicas(succ.getHashKey(), this.usedServers);
 
-                    // 2.) move data from succ to succ2 and succ3
-                    ECSNode succ2 = this.usedServers.getSucc(succ.getHashKey());
-                    succ.moveReplicas(succ2.getHashKey(), this.usedServers);
-                    ECSNode succ3 = this.usedServers.getSucc(succ2.getHashKey());
-                    succ.moveReplicas(succ3.getHashKey(), this.usedServers);
+                    // 2.) move data from succ to succ2 and succ3 -- ALL CORRECT
+                    // just the hash range doesn't cover server 3's
+                    // right now goes to old server2
+                    // succ = SERVER1
+                    pred.moveReplicas(succ2.getHashKey(), this.usedServers);
+                    // right now goes to old server2
+                    pred.moveReplicas(succ3.getHashKey(), this.usedServers);
                     
                     node = node.setData(ActionType.SHUTDOWN, this.usedServers);
                     this.freeServers.add(node);

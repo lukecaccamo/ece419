@@ -166,6 +166,7 @@ public class KVAdminCommModule implements Runnable {
 				try {
 					String thisHash = server.getServerHash();
 					ECSNode thisNode = server.getMetaData().getServer(thisHash);
+					logger.error(thisNode.getNodeHashRange()[0] + ", " + thisNode.getNodeHashRange()[1]);
 					this.server.moveData(thisNode.getNodeHashRange(), key);
 				} catch (Exception e) {
 					this.logger.error(e);

@@ -408,7 +408,7 @@ public class KVServer implements IKVServer, Runnable {
 	public static void main(String[] args) {
 		Prompt prompt = new Prompt("KVServer");
 		try {
-			new LogSetup("logs/server.log", Level.WARN);
+			new LogSetup("logs/server.log", Level.INFO);
 			if (args.length == 3) {
 				int port = Integer.parseInt(args[0]);
 				int cacheSize = Integer.parseInt(args[1]);

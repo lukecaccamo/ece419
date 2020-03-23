@@ -65,8 +65,9 @@ public class KVServerTest extends TestCase {
 			assertEquals(value + String.valueOf(i), s2value);
 		}
 
-		String s2value = kvServer1.getKV("key0");
-		assertNull(s2value);
+		// WE DONT' DELETE OLD VALUES ANYMORE, WE JUST CHECK THE RANGE EVERY GET
+		//String s2value = kvServer1.getKV("key0");
+		//assertNull(s2value);
 	}
 
 	@Test
