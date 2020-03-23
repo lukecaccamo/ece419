@@ -132,7 +132,7 @@ public class KVStore implements KVCommInterface {
 				String keyHash = Hash.MD5(key);
 
 				//Check if reconnect is necessary
-				boolean isCoordinatorOrReplica = !connectedServerHash.equals(null)
+				boolean isCoordinatorOrReplica = !(connectedServerHash == null)
 												&& metadata.isCoordinatorOrReplica(key, connectedServerHash);
 
 				if (!isCoordinatorOrReplica) {

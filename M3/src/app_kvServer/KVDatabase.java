@@ -56,9 +56,9 @@ public class KVDatabase {
             try {
                 database.createNewFile();
             } catch (IOException e) {
-                logger.error("Error! Couldn't create new db");
+                this.logger.error("Error! Couldn't create new db");
             }
-            logger.info("Created new db file");
+            this.logger.info("Created new db file");
         }
     }
 
@@ -182,7 +182,7 @@ public class KVDatabase {
             objectOut.writeObject(index);
             objectOut.close();
             fileOut.close();
-            logger.info("Index saved");
+            this.logger.info("Index saved");
         } catch (IOException e) {
             this.logger.error("Error! Saving index");
         }
@@ -206,25 +206,50 @@ public class KVDatabase {
     public HashMap<String, String> moveData(String[] range) {
         String start = range[0];
         String end = range[1];
+        String end_limit = "ffffffffffffffffffffffffffffffff";
+        String start_limit = "0";
 
         HashMap<String, String> movingData = new HashMap<String, String>();
 
-        for (Map.Entry<String, Integer> entry : index.entrySet()) {
-            String key = entry.getKey();
-            String keyHash = Hash.MD5(key);
-            if (hc.compare(keyHash, start) >= 0 && hc.compare(keyHash, end) <= 0) {
-                Integer startIndex = entry.getValue();
-                // find in actual db file
-                String value = "";
-                try {
-                    value = getValue(startIndex);
-                } catch (IOException e) {
-                    this.logger.error(e);
-                    e.printStackTrace();
+        if (hc.compare(start, end) > 0){
+            for (Map.Entry<String, Integer> entry : index.entrySet()) {
+                String key = entry.getKey();
+                String keyHash = Hash.MD5(key);
+                if ((hc.compare(keyHash, start) >= 0 && hc.compare(keyHash, end_limit) <= 0)
+                    || (hc.compare(keyHash, start_limit) >= 0 && hc.compare(keyHash, end) <= 0)) {
+                    Integer startIndex = entry.getValue();
+                    // find in actual db file
+                    String value = "";
+                    try {
+                        value = getValue(startIndex);
+                    } catch (IOException e) {
+                        this.logger.error(e);
+                        e.printStackTrace();
+                    }
+                    movingData.put(key, value);
                 }
-                movingData.put(key, value);
+            }
+
+        } else {
+            for (Map.Entry<String, Integer> entry : index.entrySet()) {
+                String key = entry.getKey();
+                String keyHash = Hash.MD5(key);
+                if (hc.compare(keyHash, start) >= 0 && hc.compare(keyHash, end) <= 0) {
+                    Integer startIndex = entry.getValue();
+                    // find in actual db file
+                    String value = "";
+                    try {
+                        value = getValue(startIndex);
+                    } catch (IOException e) {
+                        this.logger.error(e);
+                        e.printStackTrace();
+                    }
+                    movingData.put(key, value);
+                }
             }
         }
+        System.out.println(movingData);
+        this.logger.error("Move Data" + movingData.size());
         return movingData;
     }
 
