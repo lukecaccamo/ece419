@@ -4,26 +4,78 @@ By: Yi Zhou, Matthew Lee, Luke Caccamo
 ## Design
 
 ### External configuration service (ECS)
-The ECS begins by creating a ZooKeeper process and then initializing the client library. The ECS is designed such that we have a queue of free servers and a hash ring for our used servers. Servers that have not been initialized sit in the free servers queue. Once they are added to the hash ring, their hash ranges will be computed before the SSH call initializes the server. The initialized server will create a ZooKeeper node, which the ECS will wait until it is created. Afterwards, the ECS will set the `KVAdminMessage` on ZooKeeper consisting of the hashring, the node, and the associated action. Once the `KVAdminMessage` have been acknowledged, the ECS will update the node in its hash ring, then invoke `LOCK_WRITE` in the respective servers it needs to do transfers with. The ECS will then call `MOVE_DATA` on the respective servers, and finally, call `UNLOCK_WRITE`. Removing the node is done in a similar manner, but will involve calling `SHUT_DOWN` on the node after data migration is complete.
+
+#### Failure detection and Recovery
+
+#### Adding and Removing Nodes with Replication
 
 ### Client library (KVStore)
-The client first connects, initializes with empty metadata, to a known server. When the user puts in a put/get request: if the key in the request hashes to the server it connected to the server services the request, if the key hashes to a different server on the ring,--the server sends a 'SERVER_NOT_RESPONSIBLE' message to the client with the serialized metadata of the entire ring. The client deserializes the message, finds the correct server to send to and retries the request. 
+
+#### Handling Server
 
 ### Storage server (KVServer)
-The KVServer now has an additional 'KVAdminCommModule' to communicate to the ECS through zookeeper. The server is started by zookeeper in the 'STOPPED' state where is rejects all client requests. The server starts processing client requests once it receives the initServer command from the ECS and is started.
-The server then processes client requests as usual. In the case of a 'MOVE_DATA' command from the ECS the server connects to the server to transfer data to, sends the data in a map, then removes the data from its own database AFTER it has gotten confirmation from the destination server that it has finished copying the data (remove after to keep servicing read requests).
-Another design change here is that the server now sends messages in JSON, both the KVSimpleMessage for communicating with the client and KVAdminMessages to the ECS. Anytime the ECS sends a command, the server replies with an acknowledgement to change the server state of the corresponding ECSNode.
+
+#### Replication Mechanism
 
 ## JUnit Tests
-testResponsibleServers - checks that client switches server when connected to wrong one.  
-testNoServerSwitch - checks that client stays on correct server.  
-testMoveData - checks moveData function, transfer keys between servers.  
-testGetServerName - ECSNode gets correct server name.  
-testGetPort - ECSNode gets correct port.  
-testGetHostName - ECSNode gets correct host name.  
-testGetHashKey - ECSNode gets correct hashkey.  
-testFlagDefaultShutdown - ECSNode gets SHUTDOWN as default status.  
-testSetCacheSize - ECSNode sets correct cache size.  
-testSetCachePolicy - ECSNode sets correct cache policy.  
+testReplication - .  
+testClientGetTimeout - .
+testClientPutTimeout - .   
+testClientDeleteTimeout - .     
+testStop - .  
+testStart - .  
+testShutdown - .  
+testRemoveNode - .  
+testAddNode - .  
+testAddTwoNodes - .
+  
 ## Performance
-Sorry-it's good we promise
+
+The following tests were all run with the following settings: Cache Strategy: FIFO, Cache Size: 100
+These values were kept constant for fair comparison and the cache size was kept large to limit the impact of
+disk IO on the test. the goal was to isolate the features developed in milestone 3 such as replication which
+is bottle-necked by the number of network requests. The effect of cache strategy is negligible as can be seen in
+the milestone 1 report.
+
+The key value pairs were email messages from the Enron dataset.
+
+100 Puts, 200 Gets
+
+| Number Servers | Number Clients | Time (s) |
+|----------------|----------------|----------|
+| 1              | 1              | 1.159    |
+| 1              | 2              | 1.102    |
+| 1              | 5              | 1.137    |
+| 1              | 10             | 1.227    |
+| 3              | 1              | 3.687    |
+| 3              | 2              | 3.293    |
+| 3              | 5              | 4.119    |
+| 3              | 10             | 5.635    |
+| 5              | 1              | 5.886    |
+| 5              | 2              | 6.923    |
+| 5              | 5              | 7.102    |
+| 5              | 10             | 8.79     |
+
+400 Puts, 800 Gets
+
+| Number Servers | Number Clients | Time (s) |
+|----------------|----------------|----------|
+| 1              | 1              | 3.438    |
+| 1              | 2              | 3.511    |
+| 1              | 5              | 3.245    |
+| 1              | 10             | 3.494    |
+| 3              | 1              | 10.662   |
+| 3              | 2              | 8.45     |
+| 3              | 5              | 8.84     |
+| 3              | 10             | 10.452   |
+| 5              | 1              | 17.647   |
+| 5              | 2              | 17.961   |
+| 5              | 5              | 15.754   |
+| 5              | 10             | 23.215   |
+
+From these tables it can be observed that there is a linear increase in runtime as the number of clients 
+and servers increases. This is due to the fact that for every additional server there is an added 2 replication
+requests for every put request. Furthermore as the number of servers increases the number of times a 
+client has to reconnect to a new server to put or get the correct data. There are cases where the number of clients decreases
+the runtime since each client has a thread they can run in parallel eg. in the 400 put, 800 get table with 3 servers the times
+for 2 and 5 clients are significantly lower.

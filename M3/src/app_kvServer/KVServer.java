@@ -29,7 +29,7 @@ import java.util.HashMap;
 
 public class KVServer implements IKVServer, Runnable {
 	private static Logger logger = Logger.getRootLogger();
-	public final Prompt prompt;
+	public static Prompt prompt;
 
 	private boolean running;
 	private String host;
@@ -152,7 +152,6 @@ public class KVServer implements IKVServer, Runnable {
 		this.cacheStrategy = cacheStrategy.toString();
 
 		if (!this.running) {
-			this.prompt.print("Running!");
 			new Thread(this).start();
 		}
 	}
@@ -374,11 +373,8 @@ public class KVServer implements IKVServer, Runnable {
 				this.logger.error("Error! " + "Unable to establish connection. \n", e);
 			}
 		}
-		this.logger.info("Server stopped.");
-
-		if (this.adminConnection != null)
-			this.adminConnection.close();
-			System.exit(0);
+		logger.info("Server stopped.");
+		this.close();
 	}
 
 	@Override
@@ -394,7 +390,6 @@ public class KVServer implements IKVServer, Runnable {
 	@Override
 	public void close() {
 		this.running = false;
-
 		if (this.adminConnection != null)
 			this.adminConnection.close();
 			System.exit(0);
@@ -407,6 +402,7 @@ public class KVServer implements IKVServer, Runnable {
 	 */
 	public static void main(String[] args) {
 		Prompt prompt = new Prompt("KVServer");
+
 		try {
 			new LogSetup("logs/server.log", Level.INFO);
 			if (args.length == 3) {

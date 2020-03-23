@@ -32,15 +32,17 @@ public class KVAdminCommModule implements Runnable {
 	private String nodeHost;
 	private int nodePort;
 
-	private ZooKeeper zk;
+	public static ZooKeeper zk;
+	public static String zkNodeName;
 	private String zkHost;
 	private int zkPort;
-	private String zkNodeName;
 	private CountDownLatch connected;
 	private String state;
 	private ObjectMapper om;
 
 	public KVAdminCommModule(String nodeName, String zkHost, int zkPort, KVServer server) {
+		this.registerShutDownHook();
+
 		this.running = true;
 		this.server = server;
 		this.nodeName = nodeName;
@@ -78,7 +80,7 @@ public class KVAdminCommModule implements Runnable {
 				this.state = setNextState(nextState);
 		}
 		try {
-			if (this.zk.exists(zkNodeName, false) != null)
+			if (this.zkStat() != null)
 				this.zk.delete(zkNodeName, -1);
 		} catch (InterruptedException | KeeperException e) {
 			this.logger.error(e);
@@ -92,11 +94,8 @@ public class KVAdminCommModule implements Runnable {
 
 	private KVAdminMessage getNextState() {
 		try {
-			Stat zkStat = this.zk.exists(zkNodeName, false);
-			if (zkStat == null)
-				return null;
-
-			byte[] jsonBytes = this.zk.getData(zkNodeName, null, zkStat);
+			Stat zkStat = this.zkStat();
+			byte[] jsonBytes = this.zk.getData(zkNodeName, false, zkStat);
 			if (jsonBytes == null)
 				return null;
 
@@ -115,7 +114,8 @@ public class KVAdminCommModule implements Runnable {
 		HashRing metadata = nextState.getMetaData();
 		ECSNode node = metadata.getHashRing().get(key);
 
-		switch (nextState.getAction()) {
+		ActionType action = nextState.getAction();
+		switch (action) {
 			case INIT:
 				this.server.initializeServer(key, metadata, node.getCacheSize(), node.getCacheStrategy());
 				this.nodeHost = node.getNodeHost();
@@ -189,12 +189,13 @@ public class KVAdminCommModule implements Runnable {
 		}
 
 		try {
-			Stat zkStat = this.zk.exists(zkNodeName, false);
+			Stat zkStat = this.zkStat();
 			String json = this.om.writeValueAsString(nextState).trim();
 			byte[] jsonBytes = KVCommModule.toByteArray(json);
 			this.zk.setData(zkNodeName, jsonBytes, zkStat.getVersion());
-			if (nextState.getAction().equals(ActionType.SHUTDOWN_ACK))
+			if (action.equals(ActionType.SHUTDOWN_ACK))
 				this.server.shutDown();
+
 			return json;
 		} catch (JsonProcessingException | KeeperException | InterruptedException e) {
 			this.logger.error(e);
@@ -202,5 +203,32 @@ public class KVAdminCommModule implements Runnable {
 		}
 
 		return null;
+	}
+
+	private Stat zkStat() {
+		Stat zkStat = null;
+		try {
+			zkStat = this.zk.exists(zkNodeName, false);
+			if (zkStat == null)
+				this.server.shutDown();
+		} catch (KeeperException | InterruptedException e) {
+			this.logger.error(e);
+			e.printStackTrace();
+		}
+
+		return zkStat;
+	}
+
+	private void registerShutDownHook() {
+		Runtime.getRuntime().addShutdownHook(new Thread("zkNodeShutdown") {
+			@Override
+			public void run() {
+				try {
+					zk.delete(zkNodeName, zk.exists(zkNodeName, false).getVersion());
+					zk.close();
+				} catch (KeeperException | InterruptedException e) {
+				}
+			}
+		});
 	}
 }

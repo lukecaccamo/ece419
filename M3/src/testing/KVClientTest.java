@@ -357,7 +357,7 @@ public class KVClientTest extends TestCase {
 	}
 
 	@Test
-	public void testClientTimeout() throws Exception {
+	public void testClientGetTimeout() throws Exception {
 
 		Exception ex = null;
 		String key1 = "123";
@@ -375,4 +375,45 @@ public class KVClientTest extends TestCase {
 
 		assertTrue(ex instanceof TimeoutException);
 	}
+
+	@Test
+	public void testClientPutTimeout() throws Exception {
+
+		Exception ex = null;
+		String key1 = "123";
+
+		AllTests.ecs.shutdown();
+
+		sleep(2000);
+
+		try {
+			KVSimpleMessage msg = kvClient.put(key1, "value");
+		} catch (Exception e) {
+			ex = e;
+			e.printStackTrace();
+		}
+
+		assertTrue(ex instanceof TimeoutException);
+	}
+
+	@Test
+	public void testClientDeleteTimeout() throws Exception {
+
+		Exception ex = null;
+		String key1 = "123";
+
+		AllTests.ecs.shutdown();
+
+		sleep(2000);
+
+		try {
+			KVSimpleMessage msg = kvClient.put(key1, "null");
+		} catch (Exception e) {
+			ex = e;
+			e.printStackTrace();
+		}
+
+		assertTrue(ex instanceof TimeoutException);
+	}
+
 }
