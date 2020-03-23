@@ -17,6 +17,9 @@ import org.apache.log4j.Logger;
 import org.apache.zookeeper.*;
 import org.apache.zookeeper.Watcher.Event.KeeperState;
 import org.apache.zookeeper.data.Stat;
+
+import app_kvECS.ECSClient;
+
 import java.util.concurrent.CountDownLatch;
 
 import app_kvServer.IKVServer;
@@ -25,10 +28,13 @@ import ecs.IECSNode.IECSNodeFlag;
 import shared.hashring.HashRing;
 import shared.messages.IKVAdminMessage.ActionType;
 
-public class ECS implements IECS {
+public class ECS implements IECS, Runnable {
     private static Logger logger = Logger.getRootLogger();
     private final boolean debug;
     private final String configFilePath;
+
+    public static volatile boolean running = false;
+    public static volatile boolean heartbeat = false;
 
     private Properties properties;
     public HashRing usedServers;
@@ -58,6 +64,16 @@ public class ECS implements IECS {
         } catch (Exception e) {
             this.logger.error(e);
             e.printStackTrace();
+        }
+    }
+
+    public void run() {
+        while (this.running) {
+            if (this.heartbeat) {
+                try {
+                    this.monitorNodes();
+                } catch (Exception e) {}
+            }
         }
     }
 
@@ -171,6 +187,29 @@ public class ECS implements IECS {
                 return true;
         }
         throw new Exception("`awaitNodes(" + String.valueOf(count) + ", " + String.valueOf(timeout) + ")` Timeout.");
+    }
+
+    private void monitorNodes() throws Exception {
+        List<String> zkNodes = this.zk.getChildren(IECS.ZOOKEEPER_ADMIN_NODE_NAME, true);
+        if (zkNodes.size() != this.usedServers.hashRing.size()) {
+            Iterator<Map.Entry<String, ECSNode>> it = this.usedServers.hashRing.entrySet().iterator();
+            while (it.hasNext()) {
+                Map.Entry<String, ECSNode> e = it.next();
+                ECSNode node = e.getValue();
+                if (node.zkStat() == null) {
+                    it.remove();
+                    node.resetNode();
+                    this.freeServers.add(node);
+                    updateRingRanges(null);
+
+                    this.broadcast(ActionType.UPDATE);
+
+                    System.out.println();
+                    ECSClient.prompt.printError("Died: " + node.toString());
+                    ECSClient.prompt.print();
+                }
+            }
+        }
     }
 
     @Override

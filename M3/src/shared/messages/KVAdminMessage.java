@@ -27,7 +27,7 @@ public class KVAdminMessage implements Serializable, IKVAdminMessage {
 	}
 
 	public String toString() {
-		return String.format("\taction: %s\n\thashKey: %s\n\thashRing: %s", this.action.toString(),
+		return String.format("action: %s\n\thashKey: %s\n\thashRing: %s", this.action.toString(),
 				this.hashKey.toString(), this.hashRing.toString());
 	}
 
