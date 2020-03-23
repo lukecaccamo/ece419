@@ -18,16 +18,21 @@ By: Yi Zhou, Matthew Lee, Luke Caccamo
 #### Replication Mechanism
 
 ## JUnit Tests
-testReplication - .  
-testClientGetTimeout - .
-testClientPutTimeout - .   
-testClientDeleteTimeout - .     
-testStop - .  
-testStart - .  
-testShutdown - .  
-testRemoveNode - .  
-testAddNode - .  
-testAddTwoNodes - .
+Since the ECS, KVServer, and KVClient must utilize ZooKeeper to mimic its real behavior, we decided to run tests holistically to determine if each function was implemented correctly.
+We decided to write integration tests so that we can mimic a functionality's behavior. This includes the setup of the ECS, resetting each KVServer's cache and database, and running a KVClient to determine its output.
+
+| Test | Number Clients | Time (s) |
+|----------------|----------------|----------|
+| testReplication              | 1              | 1.159    |
+| testClientGetTimeout              | 2              | 1.102    |
+| testClientPutTimeout              | 5              | 1.137    |
+| testClientDeleteTimeout              | 10             | 1.227    |
+| testStop              | 1              | 3.687    |
+| testStart              | 2              | 3.293    |
+| testShutdown              | 5              | 4.119    |
+| testRemoveNode              | 10             | 5.635    |
+| testAddNode              | 1              | 5.886    |
+| testAddTwoNodes              | 2              | 6.923    |
   
 ## Performance
 
