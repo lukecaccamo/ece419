@@ -5,6 +5,7 @@ import junit.framework.Test;
 import junit.framework.TestSuite;
 import logger.LogSetup;
 import org.apache.log4j.Level;
+import testing.M3Performance.OneClient;
 
 import java.io.IOException;
 
@@ -25,7 +26,7 @@ public class PerformanceTests {
 		// perfSuite.addTestSuite(PerformanceTestLRU.class);
 		// perfSuite.addTestSuite(PerformanceTestLFU.class);
 		// perfSuite.addTestSuite(PerformanceTestFIFO.class);
-		perfSuite.addTestSuite(PerformanceTestNone.class);
+		perfSuite.addTestSuite(OneClient.class);
 		return perfSuite;
 	}
 
