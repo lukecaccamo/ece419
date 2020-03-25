@@ -370,7 +370,6 @@ public class KVClientTest extends TestCase {
 			KVSimpleMessage msg = kvClient.get(key1);
 		} catch (Exception e) {
 			ex = e;
-			e.printStackTrace();
 		}
 
 		assertTrue(ex instanceof TimeoutException);
@@ -390,7 +389,6 @@ public class KVClientTest extends TestCase {
 			KVSimpleMessage msg = kvClient.put(key1, "value");
 		} catch (Exception e) {
 			ex = e;
-			e.printStackTrace();
 		}
 
 		assertTrue(ex instanceof TimeoutException);
@@ -410,7 +408,6 @@ public class KVClientTest extends TestCase {
 			KVSimpleMessage msg = kvClient.put(key1, "null");
 		} catch (Exception e) {
 			ex = e;
-			e.printStackTrace();
 		}
 
 		assertTrue(ex instanceof TimeoutException);
