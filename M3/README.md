@@ -45,52 +45,18 @@ metadata and the client reconnects to the coordinator
 Since the ECS, KVServer, and KVClient must utilize ZooKeeper to mimic its real behavior, we decided to run tests holistically to determine if each function was implemented correctly.
 We decided to write integration tests so that we can mimic a functionality's behavior. This includes the setup/teardown of the ECS, resetting each KVServer's cache and database, and running a `GET`/`PUT`/`DELETE` on the KVClient to determine its correctness.
 
-| Test                    | Functionality                                                                                                               | Passed |
-| ----------------------- | --------------------------------------------------------------------------------------------------------------------------- | ------ |
-| testReplication         |                                                                                                                             | True   |
-| testClientGetTimeout    |                                                                                                                             | True   |
-| testClientPutTimeout    |                                                                                                                             | True   |
-| testClientDeleteTimeout |                                                                                                                             | True   |
-| testStop                | Tests if all KVServers are stopped correctly and returns `SERVER_STOPPED` on KVClient.                                      | True   |
-| testStart               | Tests if all KVServers are started correctly and returns `GET_SUCCESS` and `PUT_SUCCESS` on KVClient.                       | True   |
-| testShutdown            | Tests if all KVServers are shutdown correctly and its designated port is closed.                                            | True   |
-| testRemoveNode          | Tests if a node is removed correctly by checking the respective nodes' updated hash range/transferred data/replicated data. | True   |
-| testAddNode             | Tests if a node is added correctly by checking the respective updated hash range/transferred data/replicated data.          | True   |
-| testAddTwoNodes         | Tests if 2 nodes are added correctly by checking the respective updated hash range/transferred data/replicated data.        | True   |
-
-### Additional test set-up info:
-
-- testReplication - Set up 2 servers, put a value to server1. Then connect to server2 and execute a get request. Check
-that the you can get the value that was put in server1 from server2.
-
-- testClientGetTimeout - Connect a client to the server. Kill the server then execute a get request. Check that a TimeOutException
-                         is thrown by the client.
-
-- testClientPutTimeout - Connect a client to the server. Kill the server then execute a put request. Check that a TimeOutException
-                       is thrown by the client.   
-
-- testClientDeleteTimeout - Connect a client to the server. Kill the server then execute a delete request. Check that a TimeOutException
-                          is thrown by the client.     
-
-- testStop - Start the ECS and servers with new SSH script accounting for user and password. Send an ECS STOP request and check
-             that the servers have stopped.  
-
-- testStart - Start the ECS and servers with new SSH script accounting for user and password. Send an ECS START request and check
-            that the servers have started.  
-
-- testShutdown - Start the ECS and servers with new SSH script accounting for user and password. Send an ECS SHUTDOWN request and check
-               that the servers have shutdown and the processes have exit.  
-
-- testRemoveNode - Start the ECS and spin up multiple servers. Remove a node and see that the client that was connected to that node times out.
-                Then connect to the other server2 and execute a get request to check that the value of the removed server was replicated to the 
-                second server.  
-
-- testAddNode - Start the ECS and spin up multiple servers. Put a value to server1. Remove a server2. Then add back server2. Then 
-                connect to the other server and execute a get request to check that the value of the removed server was replicated to the 
-                second server. 
-
-- testAddTwoNodes - Same as the above test but with 3 servers. Check that they all can serve the same key from a get request
-                    since they all replicate to eachother.
+| Test                    | Functionality                                                                                                                                                                                                                                                                                                                                                                                           |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| testReplication         | Set up 2 servers, `PUT` a value to `server1`. Then connect to `server2` and execute a `GET` request. Check                                                                                                                                                that the you can get the value that was put in `server1` from `server2`.                                                                                  |
+| testClientGetTimeout    | Connect a client to the server. Kill the server then execute a `GET` request. Check that a `TimeOutException` is thrown by the client.                                                                                                                                                                                                                                                                      |
+| testClientPutTimeout    | Connect a client to the server. Kill the server then execute a `PUT` request. Check that a `TimeOutException` is thrown by the client.                                                                                                                                                                                                                                                                      |
+| testClientDeleteTimeout | Connect a client to the server. Kill the server then execute a delete request. Check that a `TimeOutException` is thrown by the client.                                                                                                                                                                                                                                                                   |
+| testStop                | Tests if all KVServers were stopped correctly and returns `SERVER_STOPPED` on KVClient. Start the ECS and servers with new SSH script accounting for user and password. Send an ECS `STOP` request and check that the servers have stopped.                                                                                                                                                                |
+| testStart               | Tests if all KVServers were started correctly and returns `GET_SUCCESS` and `PUT_SUCCESS` on KVClient. Start the ECS and servers with new SSH script accounting for user and password. Send an ECS `START` request and check that the servers have started.                                                                                                                                                |
+| testShutdown            | Tests if all KVServers were shutdown correctly and its designated port is closed. Start the ECS and servers with new SSH script accounting for user and password. Send an ECS `SHUTDOWN` request and check that the servers have shutdown and the processes have exit.                                                                                                                                     |
+| testRemoveNode          | Tests if a node was removed correctly by checking the respective nodes' updated hash range/transferred data/replicated data. Start the ECS and spin up multiple servers. Remove a node and see that the client that was connected to that node times out. Then connect to the other `server2` and execute a `GET` request to check that the value of the removed server was replicated to the second server. |
+| testAddNode             | Tests if a node was added correctly by checking the respective updated hash range/transferred data/replicated data. Start the ECS and spin up multiple servers. Put a value to `server1`. Remove a `server2`. Then add back `server2`. Then connect to the other server and execute a `GET` request to check that the value of the removed server was replicated to the second server.                           |
+| testAddTwoNodes         | Tests if 2 nodes are added correctly by checking the respective updated hash range/transferred data/replicated data. Same as the above test but with 3 servers. Check that they all can serve the same key from a `GET` request since they all replicate to eachother.                                                                                                                                    |
   
 ## Performance
 
