@@ -93,9 +93,6 @@ public class ECSNode implements IECSNode {
         this.flag = IECSNodeFlag.SHUT_DOWN;
         this.cacheSize = 0;
         this.cacheStrategy = CacheStrategy.None;
-
-        this.stopKVServer();
-
         return this;
     }
 
