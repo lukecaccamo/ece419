@@ -199,15 +199,12 @@ public class ECS implements IECS, Runnable {
                 Map.Entry<String, ECSNode> e = it.next();
                 ECSNode node = e.getValue();
                 if (node.zkStat() == null) {
-                    it.remove();
                     int newCacheSize = node.getCacheSize();
                     CacheStrategy newCacheStrategy = node.getCacheStrategy();
 
-                    node.resetNode();
-                    this.freeServers.add(node);
-                    updateRingRanges(null);
-
-                    this.broadcast(ActionType.UPDATE);
+                    Collection<String> nodeNames = new ArrayList<>();
+                    nodeNames.add(node.getNodeName());
+                    removeNodes(nodeNames);
 
                     System.out.println();
                     ECSClient.prompt.printError("Died: " + node.toString());
