@@ -70,6 +70,7 @@ public class ECSClient implements IECSClient {
     }
 
     private void handleCommand(String cmdLine) throws Exception {
+        this.ecs.awaitNodes(0, 10000);
         String[] tokens = cmdLine.split("\\s+");
         switch (tokens[0]) {
             case "quit":
@@ -128,6 +129,7 @@ public class ECSClient implements IECSClient {
                 this.prompt.printError("Unknown command");
                 this.printHelp();
         }
+        this.ecs.awaitNodes(0, 10000);
     }
 
     @Override
