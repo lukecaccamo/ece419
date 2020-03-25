@@ -236,20 +236,10 @@ public class ECS implements IECS, Runnable {
                     this.updateRingRanges();
                     this.broadcast(ActionType.UPDATE);
 
-                    succ.setData(ActionType.LOCK_WRITE, this.usedServers);
-                    pred3.setData(ActionType.LOCK_WRITE, this.usedServers);
                     pred3.moveReplicas(succ.getHashKey(), this.usedServers);
-                    succ.setData(ActionType.UNLOCK_WRITE, this.usedServers);
-                    pred3.setData(ActionType.UNLOCK_WRITE, this.usedServers);
 
-                    succ.setData(ActionType.LOCK_WRITE, this.usedServers);
-                    succ2.setData(ActionType.LOCK_WRITE, this.usedServers);
-                    succ3.setData(ActionType.LOCK_WRITE, this.usedServers);
                     succ.moveReplicas(succ2.getHashKey(), this.usedServers);
                     succ.moveReplicas(succ3.getHashKey(), this.usedServers);
-                    succ.setData(ActionType.UNLOCK_WRITE, this.usedServers);
-                    succ2.setData(ActionType.UNLOCK_WRITE, this.usedServers);
-                    succ3.setData(ActionType.UNLOCK_WRITE, this.usedServers);
                 }
             }
         }
@@ -273,20 +263,10 @@ public class ECS implements IECS, Runnable {
         this.updateRingRanges();
         this.broadcast(ActionType.UPDATE);
 
-        succ.setData(ActionType.LOCK_WRITE, this.usedServers);
-        pred3.setData(ActionType.LOCK_WRITE, this.usedServers);
         pred3.moveReplicas(succ.getHashKey(), this.usedServers);
-        succ.setData(ActionType.UNLOCK_WRITE, this.usedServers);
-        pred3.setData(ActionType.UNLOCK_WRITE, this.usedServers);
 
-        succ.setData(ActionType.LOCK_WRITE, this.usedServers);
-        succ2.setData(ActionType.LOCK_WRITE, this.usedServers);
-        succ3.setData(ActionType.LOCK_WRITE, this.usedServers);
         succ.moveReplicas(succ2.getHashKey(), this.usedServers);
         succ.moveReplicas(succ3.getHashKey(), this.usedServers);
-        succ.setData(ActionType.UNLOCK_WRITE, this.usedServers);
-        succ2.setData(ActionType.UNLOCK_WRITE, this.usedServers);
-        succ3.setData(ActionType.UNLOCK_WRITE, this.usedServers);
         return true;
     }
 
