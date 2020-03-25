@@ -226,13 +226,18 @@ public class ECS implements IECS, Runnable {
     public boolean removeNodes(Collection<String> nodeNames) {
         for (String name : nodeNames) {
             Iterator<Map.Entry<String, ECSNode>> it = this.usedServers.hashRing.entrySet().iterator();
+            
             while (it.hasNext()) {
                 Map.Entry<String, ECSNode> e = it.next();
                 String removed = e.getKey();
                 ECSNode node = e.getValue();
+                
                 if (node.getNodeName().equals(name)) {
-                    // NODE = PRED
+                    // NODE = PRED, replace pred with succ
                     // SUCC = SERVER 2
+                    updateRingRanges(null);
+                    this.broadcast(ActionType.UPDATE);
+                    
                     ECSNode succ = this.usedServers.getSucc(node.getHashKey());
                     // PRED = SERVER 3
                     ECSNode pred = this.usedServers.getPred(succ.getHashKey());
@@ -251,7 +256,7 @@ public class ECS implements IECS, Runnable {
                     // 0.) move node's ranged data to succ
                     // NOT NECESSARY SINCE SUCCESSOR WOULD ALREADY HAVE DATA
                     // CORRECT
-                    pred.moveReplicas(succ.getHashKey(), this.usedServers);
+                    //pred.moveReplicas(succ.getHashKey(), this.usedServers);
 
                     /*
                     System.out.println("succ: " + succ.getHashKey());
@@ -265,8 +270,66 @@ public class ECS implements IECS, Runnable {
                     succ.setData(ActionType.UNLOCK_WRITE, this.usedServers);
                     node.setData(ActionType.UNLOCK_WRITE, this.usedServers);
 
+                    // 1.) pred pred to succ
                     updateRingRanges(node);
                     this.broadcast(ActionType.UPDATE);
+
+                    pred3.moveReplicas(succ.getHashKey(), this.usedServers);
+
+                    // 2.) move data from succ to succ2 and succ3 -- ALL CORRECT
+                    succ.moveReplicas(succ2.getHashKey(), this.usedServers);
+                    succ.moveReplicas(succ3.getHashKey(), this.usedServers);
+
+                    node = node.setData(ActionType.SHUTDOWN, this.usedServers);
+                    this.freeServers.add(node);
+
+                    it.remove();
+                    updateRingRanges(null);
+                    this.broadcast(ActionType.UPDATE);
+                    
+                }
+            }
+        }
+        return true;
+    }
+
+    
+    public boolean removeCrashedNodes(Collection<String> nodeNames) {
+        for (String name : nodeNames) {
+            Iterator<Map.Entry<String, ECSNode>> it = this.usedServers.hashRing.entrySet().iterator();
+            
+            while (it.hasNext()) {
+                Map.Entry<String, ECSNode> e = it.next();
+                String removed = e.getKey();
+                ECSNode node = e.getValue();
+                
+                if (node.getNodeName().equals(name)) {
+                    // NODE = PRED, replace pred with succ
+                    // SUCC = SERVER 2
+                    updateRingRanges(node);
+                    this.broadcast(ActionType.UPDATE);
+                    ECSNode succ = this.usedServers.getSucc(node.getHashKey());
+                    // PRED = SERVER 3
+                    ECSNode pred = this.usedServers.getPred(succ.getHashKey());
+                    // PRED2 = SERVER4
+                    ECSNode pred2 = this.usedServers.getPred(pred.getHashKey());
+                    // PRED3 = SERVER 5
+                    ECSNode pred3 = this.usedServers.getPred(pred2.getHashKey());
+                    // SUCC2 = SERVER 1
+                    ECSNode succ2 = this.usedServers.getSucc(succ.getHashKey());
+                    // succ3 = SERVER 5
+                    ECSNode succ3 = this.usedServers.getSucc(succ2.getHashKey());   
+
+                    succ.setData(ActionType.LOCK_WRITE, this.usedServers);
+                    //node.setData(ActionType.LOCK_WRITE, this.usedServers);
+
+                    // 0.) move node's ranged data to succ
+                    // NOT NECESSARY SINCE SUCCESSOR WOULD ALREADY HAVE DATA
+                    // CORRECT
+                    //pred.moveReplicas(succ.getHashKey(), this.usedServers);
+
+                    succ.setData(ActionType.UNLOCK_WRITE, this.usedServers);
+                    //node.setData(ActionType.UNLOCK_WRITE, this.usedServers);
 
                     // 1.) pred pred to succ
                     // right now goes to server4
@@ -275,19 +338,18 @@ public class ECS implements IECS, Runnable {
                     pred3.moveReplicas(succ.getHashKey(), this.usedServers);
 
                     // 2.) move data from succ to succ2 and succ3 -- ALL CORRECT
-                    // just the hash range doesn't cover server 3's
-                    // right now goes to old server2
-                    // succ = SERVER1
-                    pred.moveReplicas(succ2.getHashKey(), this.usedServers);
-                    // right now goes to old server2
-                    pred.moveReplicas(succ3.getHashKey(), this.usedServers);
-                    
-                    node = node.setData(ActionType.SHUTDOWN, this.usedServers);
+
+                    succ.moveReplicas(succ2.getHashKey(), this.usedServers);
+                    succ.moveReplicas(succ3.getHashKey(), this.usedServers);
+
+                    //node = node.setData(ActionType.SHUTDOWN, this.usedServers);
+                    //node.resetNode();
                     this.freeServers.add(node);
 
                     it.remove();
                     updateRingRanges(null);
                     this.broadcast(ActionType.UPDATE);
+                    
                 }
             }
         }
@@ -385,22 +447,48 @@ public class ECS implements IECS, Runnable {
             return;
 
         Set<Map.Entry<String, ECSNode>> entries = this.usedServers.getHashRing().entrySet();
-        if (neglected != null)
-            entries.remove(neglected.getHashKey());
+        /*if (neglected != null){
+            Map.Entry<String, ECSNode> removed = null;
+            for (Map.Entry<String, ECSNode> e : entries){
+                if (e.getKey().equals(neglected.getHashKey())){
+                    removed = e;
+                }
+            }
+            entries.remove(removed);
+            //entries.remove(neglected.getHashKey());
+            ECSClient.prompt.print(entries.toString());
+        }*/
 
         Iterator<Map.Entry<String, ECSNode>> it = entries.iterator();
-        String moveFrom = null;
-        String prevHash = null;
+        
+        //String firstHash = this.usedServers.hashRing.firstKey();
+        String firstHash = it.next().getKey();
+        ECSNode firstNode = this.usedServers.hashRing.get(firstHash);
+
+        //String moveFrom = null;
+        String prevHash = firstHash;
+
         while (it.hasNext()) {
             Map.Entry<String, ECSNode> entry = it.next();
-            if (prevHash != null) {
-                ECSNode n = entry.getValue();
+            //ECSClient.prompt.print(entry.getValue().getNodeName());
+            
+            ECSNode n = entry.getValue();
+            //if (neglected!=null){
+                //ECSClient.prompt.print("Neglected: " + neglected.getHashKey());
+                //ECSClient.prompt.print("Current: " + n.getHashKey());
+            //}
+
+            if ((neglected != null) && (neglected.getHashKey().equals(n.getHashKey()))){
+                continue;
+            } else {
                 n.setNodeHashRange(prevHash, entry.getKey());
+                //ECSClient.prompt.print(n.getNodeName());
+                prevHash = entry.getKey();
             }
-            prevHash = entry.getKey();
+            
         }
-        String firstHash = this.usedServers.hashRing.firstKey();
-        ECSNode n = this.usedServers.hashRing.get(firstHash);
-        n.setNodeHashRange(prevHash, firstHash);
+        
+        firstNode.setNodeHashRange(prevHash, firstHash);
+        //ECSClient.prompt.print(this.usedServers.hashRing.toString());
     }
 }

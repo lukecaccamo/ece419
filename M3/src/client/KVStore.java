@@ -83,6 +83,7 @@ public class KVStore implements KVCommInterface {
 					ECSNode responsible = this.metadata.serverLookup(keyHash);
 					System.out.println("Reconnecting...");
 					disconnect();
+					//System.out.println(responsible.toString());
 					this.serverAddress = responsible.getNodeHost();
 					this.serverPort = responsible.getNodePort();
 					connect();
