@@ -202,9 +202,6 @@ public class ECS implements IECS, Runnable {
                     System.out.println();
                     ECSClient.prompt.printError("Died: " + node.toString());
                     ECSClient.prompt.print();
-
-                    int newCacheSize = node.getCacheSize();
-                    CacheStrategy newCacheStrategy = node.getCacheStrategy();
                     this.removeCrashedNode(node.getHashKey());
                 }
             }
