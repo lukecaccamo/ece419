@@ -3,6 +3,7 @@ package testing;
 import app_kvServer.IKVServer.CacheStrategy;
 import client.KVStore;
 import ecs.ECSNode;
+import ecs.IECSNode;
 import ecs.IECSNode.IECSNodeFlag;
 import junit.framework.TestCase;
 import org.junit.Test;
@@ -13,6 +14,8 @@ import shared.messages.KVSimpleMessage;
 
 import java.util.ArrayList;
 import java.util.Collection;
+
+import static java.lang.Thread.sleep;
 
 public class ECSTest extends TestCase {
     private ECSNode kvServer1, kvServer2;
@@ -131,7 +134,7 @@ public class ECSTest extends TestCase {
     }
 
     @Test
-	public void testRemoveNode() {
+	public void testRemoveNode() throws InterruptedException {
         Exception ex = null;
 
         KVSimpleMessage toServer2 = null;
@@ -156,6 +159,9 @@ public class ECSTest extends TestCase {
         AllTests.ecs.removeNodes(toRemove);
         assertEquals("68d77f380f7e215676838eca9b90ebb8", kvServer1.getNodeHashRange()[0]);
         assertEquals("68d77f380f7e215676838eca9b90ebb8", kvServer1.getNodeHashRange()[1]);
+
+        //wait for node to shutdown completely
+        sleep(1000);
 
         ex = null;
         try {
