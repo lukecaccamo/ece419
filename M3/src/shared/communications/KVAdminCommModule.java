@@ -152,7 +152,7 @@ public class KVAdminCommModule implements Runnable {
 				nextState.setAction(ActionType.IS_WRITER_LOCKED_ACK);
 				break;
 			case MOVE_DATA:
-				this.logger.error("calling move data");
+				//this.logger.error("calling move data");
 				try {
 					this.server.moveData(node.getNodeHashRange(), key);
 				} catch (Exception e) {
@@ -162,11 +162,11 @@ public class KVAdminCommModule implements Runnable {
 				nextState.setAction(ActionType.MOVE_DATA_ACK);
 				break;
 			case MOVE_REPLICAS:
-				this.logger.error("calling move replicas");
+				//this.logger.error("calling move replicas");
 				try {
 					String thisHash = server.getServerHash();
 					ECSNode thisNode = server.getMetaData().getServer(thisHash);
-					logger.error(thisNode.getNodeHashRange()[0] + ", " + thisNode.getNodeHashRange()[1]);
+					//logger.error(thisNode.getNodeHashRange()[0] + ", " + thisNode.getNodeHashRange()[1]);
 					this.server.moveData(thisNode.getNodeHashRange(), key);
 				} catch (Exception e) {
 					this.logger.error(e);
@@ -175,6 +175,7 @@ public class KVAdminCommModule implements Runnable {
 				nextState.setAction(ActionType.MOVE_REPLICAS_ACK);
 				break;
 			case UPDATE:
+				this.logger.info("METADATA UPDATED");
 				this.server.setMetaData(metadata);
 				nextState.setAction(ActionType.UPDATE_ACK);
 				break;
