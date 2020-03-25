@@ -135,13 +135,13 @@ public class ECSNode implements IECSNode {
 
     public Stat zkStat() {
         Stat zkStat = null;
-		try {
-			zkStat = this.zk.exists(zkNodeName, false);
-		} catch (KeeperException | InterruptedException e) {
-			this.logger.warn(e);
-			e.printStackTrace();
-		}
-		return zkStat;
+        try {
+            zkStat = this.zk.exists(zkNodeName, false);
+        } catch (KeeperException | InterruptedException e) {
+            this.logger.warn(e);
+            e.printStackTrace();
+        }
+        return zkStat;
     }
 
     public ECSNode setData(ActionType action, HashRing hashRing) {
@@ -151,14 +151,16 @@ public class ECSNode implements IECSNode {
             byte[] jsonBytes = KVCommModule.toByteArray(jsonMetaData);
 
             Stat zkStat = this.zkStat();
-            this.zk.setData(this.zkNodeName, jsonBytes, zkStat.getVersion());
 
-            return this.await(jsonMetaData);
+            if (zkStat != null) {
+                this.zk.setData(this.zkNodeName, jsonBytes, zkStat.getVersion());
+                return this.await(jsonMetaData);
+            }
         } catch (JsonProcessingException | KeeperException | InterruptedException e) {
             this.logger.error(e);
             e.printStackTrace();
         }
-        return null;
+        return this;
     }
 
     public ECSNode moveData(String moveTo, HashRing hashRing) {
@@ -168,14 +170,16 @@ public class ECSNode implements IECSNode {
             byte[] jsonBytes = KVCommModule.toByteArray(jsonMetaData);
 
             Stat zkStat = this.zkStat();
-            this.zk.setData(this.zkNodeName, jsonBytes, zkStat.getVersion());
 
-            return this.await(jsonMetaData);
+            if (zkStat != null) {
+                this.zk.setData(this.zkNodeName, jsonBytes, zkStat.getVersion());
+                return this.await(jsonMetaData);
+            }
         } catch (JsonProcessingException | KeeperException | InterruptedException e) {
             this.logger.error(e);
             e.printStackTrace();
         }
-        return null;
+        return this;
     }
 
     public ECSNode moveReplicas(String moveTo, HashRing hashRing) {
@@ -185,14 +189,16 @@ public class ECSNode implements IECSNode {
             byte[] jsonBytes = KVCommModule.toByteArray(jsonMetaData);
 
             Stat zkStat = this.zkStat();
-            this.zk.setData(this.zkNodeName, jsonBytes, zkStat.getVersion());
 
-            return this.await(jsonMetaData);
+            if (zkStat != null) {
+                this.zk.setData(this.zkNodeName, jsonBytes, zkStat.getVersion());
+                return this.await(jsonMetaData);
+            }
         } catch (JsonProcessingException | KeeperException | InterruptedException e) {
             this.logger.error(e);
             e.printStackTrace();
         }
-        return null;
+        return this;
     }
 
     private ECSNode await(String oldState) {
@@ -225,9 +231,9 @@ public class ECSNode implements IECSNode {
     }
 
     public String toString() {
-        return String.format(" %s(%s:%d) flag: %s range: (%s,%s) cache: %s(%d)", this.getNodeName(),
-                this.getNodeHost(), this.getNodePort(), this.getFlag().toString(), this.getNodeHashRange()[0],
-                this.getNodeHashRange()[1], this.getCacheStrategy().toString(), this.getCacheSize());
+        return String.format(" %s(%s:%d) flag: %s range: (%s,%s) cache: %s(%d)", this.getNodeName(), this.getNodeHost(),
+                this.getNodePort(), this.getFlag().toString(), this.getNodeHashRange()[0], this.getNodeHashRange()[1],
+                this.getCacheStrategy().toString(), this.getCacheSize());
     }
 
     /**
