@@ -15,6 +15,10 @@ On ECS shutdown, it sends a request to all of its nodes to finish processing its
 
 #### Adding and Removing Nodes with Replication
 
+When adding a node, the ECS first updates the metadata and broadcasts the update to the nodes. Then the ECS moves the data in the new node's hash range from the new node's successor to the new node. Then the new node's predecessor moves data from its own range to new node. Similarily, the new node's predecessor's predecessor moves data from its own range to the new node to satisfy replication. We do not delete stale data from the new node's successor (the successor will not need to keep track of data served by 3 servers behind it) and instead implement a range check on each put/get. 
+
+When removing a node, the ECS first moves the data in the removing node's hash range from the removing node to the successor. Then the predecessor of the predecessor of the removing node sends its own data to the successor to satisfy replication. We do not do this with the predecssors as the successor should already have the replication. Then the hash ranges (metadata) are updated (and broadcasted to the nodes) and the data in the new succesor's hash range from the successor is sent to its own successor and its successor's successor. This is done to satisfy replication of the new data (any data that the removing node was reposnsible for).
+
 ### Client library (KVStore)
 
 #### Handling Server Failure
