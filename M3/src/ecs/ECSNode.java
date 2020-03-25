@@ -180,11 +180,13 @@ public class ECSNode implements IECSNode {
 
     public ECSNode moveReplicas(String moveTo, HashRing hashRing) {
         try {
-            Stat zkStat = this.zk.exists(this.zkNodeName, false);
             KVAdminMessage adminMessage = new KVAdminMessage(ActionType.MOVE_REPLICAS, moveTo, hashRing);
             String jsonMetaData = this.om.writeValueAsString(adminMessage).trim();
             byte[] jsonBytes = KVCommModule.toByteArray(jsonMetaData);
+
+            Stat zkStat = this.zkStat();
             this.zk.setData(this.zkNodeName, jsonBytes, zkStat.getVersion());
+
             return this.await(jsonMetaData);
         } catch (JsonProcessingException | KeeperException | InterruptedException e) {
             this.logger.error(e);
